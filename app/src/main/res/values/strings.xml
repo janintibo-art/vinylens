@@ -1,6 +1,10 @@
 <resources>
     <string name="app_name">VinyLens</string>
     <string name="hint_query">Artiste + titre</string>
+    <string name="bulk_box">Changer de caisse</string>
+    <string name="bulk_delete">Supprimer</string>
+    <string name="bulk_selected">%d sélectionnés</string>
+    <string name="disc_tracks">MORCEAUX</string>
     <string name="library_title">Ma bibliothèque</string>
     <string name="library_search_hint">Artiste, titre, label, caisse, notes…</string>
     <string name="library_empty_title">Bibliothèque vide</string>
@@ -11,6 +15,9 @@
     <string name="filter_all">Tout</string>
     <string name="count_filtered">%1$d sur %2$d disques</string>
     <string name="menu_library">Ma bibliothèque</string>
+    <string name="menu_backup">Sauvegarde</string>
+    <string name="menu_import">Importer ma collection Discogs</string>
+    <string name="menu_tracks">Récupérer les morceaux</string>
     <string name="menu_box">Caisse courante</string>
     <string name="disc_title">Fiche du disque</string>
     <string name="disc_box">RANGEMENT</string>

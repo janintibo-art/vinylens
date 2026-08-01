@@ -250,3 +250,23 @@ libre : appui long sur une vignette pour la supprimer. Boutons ouvrir sur Discog
 
 Stockage : `filesDir/vinylens_library.json` pour les fiches, `filesDir/library/` pour les images.
 Rien ne part sur un serveur.
+
+## Sauvegarde, import et morceaux (v3.2)
+
+**Sauvegarde** (menu ⋮) — archive ZIP contenant `vinylens_library.json`, `vinylens_items.json`
+et toutes les images, envoyée où tu veux par la feuille de partage. La restauration **fusionne** :
+les fiches déjà présentes ne sont jamais écrasées, et les chemins absolus des images sont réécrits
+vers le stockage du téléphone courant. Export CSV de la bibliothèque également disponible.
+
+**Import de la collection Discogs** — `GET /users/{u}/collection/folders/0/releases`, 100 par page.
+Artiste, titre, label, n°, année, format, genres et styles proviennent de `basic_information` :
+aucune requête supplémentaire par disque. Les pressages déjà en bibliothèque sont ignorés, et les
+suffixes d'homonymes de Discogs (« The Prodigy (2) ») sont nettoyés.
+
+**Morceaux** — la tracklist est récupérée à chaque ajout, et « Récupérer les morceaux » complète
+les fiches qui en manquent (une requête par disque, le limiteur cadence à 50/min). La recherche
+de la bibliothèque interroge aussi les morceaux : chercher un titre affiche le disque avec la
+plage correspondante en doré, et la fiche liste l'intégralité des plages.
+
+**Actions groupées** — appui long dans la bibliothèque pour entrer en sélection, puis déplacement
+vers une autre caisse ou suppression en lot. Le retour arrière quitte la sélection avant l'écran.

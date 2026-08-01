@@ -7,6 +7,9 @@
         android:title="@string/menu_chain"
         app:showAsAction="never" />
     <item android:id="@+id/action_library" android:title="@string/menu_library" app:showAsAction="never" />
+    <item android:id="@+id/action_backup" android:title="@string/menu_backup" app:showAsAction="never" />
+    <item android:id="@+id/action_import" android:title="@string/menu_import" app:showAsAction="never" />
+    <item android:id="@+id/action_tracks" android:title="@string/menu_tracks" app:showAsAction="never" />
     <item android:id="@+id/action_box" android:title="@string/menu_box" app:showAsAction="never" />
     <item android:id="@+id/action_sidelined" android:title="@string/menu_sidelined" app:showAsAction="never" />
     <item android:id="@+id/action_drafts" android:title="@string/menu_drafts" app:showAsAction="never" />

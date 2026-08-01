@@ -122,6 +122,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+    private val pickBackup =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            if (uri != null) restoreBackup(uri)
+        }
+
     private val pickImage =
         registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             if (uri != null) onImage(pendingSide, uri)
@@ -219,6 +224,9 @@ class MainActivity : AppCompatActivity() {
             true
         }
         R.id.action_library -> { startActivity(Intent(this, LibraryActivity::class.java)); true }
+        R.id.action_backup -> { backupDialog(); true }
+        R.id.action_import -> { importCollection(); true }
+        R.id.action_tracks -> { completeTracks(); true }
         R.id.action_box -> { boxDialog(); true }
         R.id.action_sidelined -> { pileDialog(Store.REVIEW); true }
         R.id.action_drafts -> { pileDialog(Store.CREATE); true }
@@ -772,7 +780,10 @@ class MainActivity : AppCompatActivity() {
             val cover = withContext(Dispatchers.IO) {
                 Library.downloadCover(this@MainActivity, release.thumb, disc.id)
             }
-            Library.update(this@MainActivity, disc.copy(photos = photos, coverPath = cover))
+            val tracks = withContext(Dispatchers.IO) {
+                try { DiscogsApi.tracklist(release.id, token) } catch (e: Exception) { emptyList() }
+            }
+            Library.update(this@MainActivity, disc.copy(photos = photos, coverPath = cover, tracks = tracks))
         }
     }
 
@@ -1306,6 +1317,185 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ---------- Sauvegarde, import, morceaux ----------
+
+    private fun backupDialog() {
+        val discs = Library.count(this)
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Sauvegarde")
+            .setMessage("$discs disques en bibliothèque. L'archive contient les fiches, les piles et toutes les photos.")
+            .setItems(arrayOf("Créer une archive", "Restaurer une archive", "Exporter la bibliothèque en CSV")) { _, which ->
+                when (which) {
+                    0 -> exportBackup()
+                    1 -> {
+                        MaterialAlertDialogBuilder(this)
+                            .setTitle("Restaurer")
+                            .setMessage("Les fiches absentes seront ajoutées ; celles déjà présentes ne sont pas touchées.")
+                            .setPositiveButton("Choisir l'archive") { _, _ -> pickBackup.launch("*/*") }
+                            .setNegativeButton("Annuler", null)
+                            .show()
+                    }
+                    2 -> exportLibraryCsv()
+                }
+            }
+            .setNegativeButton("Fermer", null)
+            .show()
+    }
+
+    private fun exportBackup() {
+        progress.visibility = View.VISIBLE
+        status.text = "Création de l'archive…"
+        lifecycleScope.launch {
+            val zip = withContext(Dispatchers.IO) { Backup.export(this@MainActivity) }
+            progress.visibility = View.GONE
+            if (zip == null) {
+                status.text = "Sauvegarde impossible."
+                return@launch
+            }
+            val uri = FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", zip)
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/zip"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, zip.name)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            status.text = "Archive prête (${zip.length() / 1024} Ko) : ${zip.name}"
+            try {
+                startActivity(Intent.createChooser(intent, "Sauvegarder vers…"))
+            } catch (e: Exception) {
+                toast("Aucune application pour recevoir l'archive.")
+            }
+        }
+    }
+
+    private fun restoreBackup(uri: Uri) {
+        progress.visibility = View.VISIBLE
+        status.text = "Restauration…"
+        lifecycleScope.launch {
+            val r = withContext(Dispatchers.IO) { Backup.import(this@MainActivity, uri) }
+            progress.visibility = View.GONE
+            status.text = if (r.error != null) "Échec : ${r.error}"
+            else "Restauré : ${r.discs} disques, ${r.items} fiches en pile, ${r.photos} images."
+        }
+    }
+
+    private fun exportLibraryCsv() {
+        val discs = Library.all(this)
+        if (discs.isEmpty()) { toast("Bibliothèque vide."); return }
+        lifecycleScope.launch {
+            val file = withContext(Dispatchers.IO) {
+                try {
+                    val sb = StringBuilder("Artiste;Titre;Label;N° catalogue;Année;Pays;Format;Genres;Caisse;Notes;Discogs\n")
+                    fun cell(v: String) = "\"" + v.replace("\"", "\"\"") + "\""
+                    for (d in discs.sortedBy { it.sortKey(false) }) {
+                        sb.append(
+                            listOf(
+                                cell(d.artist), cell(d.title), cell(d.label), cell(d.catno),
+                                cell(d.year), cell(d.country), cell(d.format),
+                                cell(d.genres.joinToString(", ")), cell(d.box), cell(d.notes),
+                                cell(d.discogsUrl)
+                            ).joinToString(";")
+                        )
+                        sb.append('\n')
+                    }
+                    val dir = java.io.File(cacheDir, "exports").apply { mkdirs() }
+                    val f = java.io.File(dir, "bibliotheque.csv")
+                    f.writeText(sb.toString())
+                    f
+                } catch (e: Exception) { null }
+            }
+            if (file == null) { toast("Export impossible."); return@launch }
+            val uri = FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", file)
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/csv"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            try {
+                startActivity(Intent.createChooser(intent, "Exporter la bibliothèque"))
+            } catch (e: Exception) {
+                toast("Aucune application pour l'export.")
+            }
+        }
+    }
+
+    /** Verse la collection Discogs existante dans la bibliothèque locale, page par page. */
+    private fun importCollection() {
+        if (username.isBlank() || token.isBlank()) { accountDialog(); return }
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Importer ma collection Discogs")
+            .setMessage("Les pressages déjà présents en bibliothèque sont ignorés. Les pochettes " +
+                    "resteront chargées depuis Discogs : prévois du réseau pour les voir.")
+            .setPositiveButton("Importer") { _, _ -> runImport() }
+            .setNegativeButton("Annuler", null)
+            .show()
+    }
+
+    private fun runImport() {
+        progress.visibility = View.VISIBLE
+        status.text = "Import de ta collection…"
+        lifecycleScope.launch {
+            var page = 1
+            var pages = 1
+            var added = 0
+            var skipped = 0
+            try {
+                while (page <= pages) {
+                    val (discs, total) = withContext(Dispatchers.IO) {
+                        DiscogsApi.collectionPage(username, token, page)
+                    }
+                    pages = total
+                    for (d in discs) {
+                        if (Library.hasRelease(this@MainActivity, d.releaseId)) { skipped++; continue }
+                        Library.add(this@MainActivity, d.copy(box = currentBox))
+                        added++
+                    }
+                    status.text = "Import : page $page/$pages · $added ajoutés"
+                    page++
+                }
+                progress.visibility = View.GONE
+                status.text = "Import terminé : $added disques ajoutés, $skipped déjà présents."
+            } catch (e: Exception) {
+                progress.visibility = View.GONE
+                status.text = "Import interrompu (${e.message}). $added disques déjà enregistrés."
+            }
+        }
+    }
+
+    /** Complète les tracklists manquantes : une requête par disque, donc en tâche de fond. */
+    private fun completeTracks() {
+        if (token.isBlank()) { accountDialog(); return }
+        val todo = Library.withoutTracks(this)
+        if (todo.isEmpty()) { toast("Toutes les fiches ont déjà leurs morceaux."); return }
+
+        val minutes = maxOf(1, todo.size / 50)
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Récupérer les morceaux")
+            .setMessage("${todo.size} fiches sans tracklist. Une requête par disque, soit environ " +
+                    "$minutes minute(s) en respectant la limite Discogs. Tu peux continuer à " +
+                    "utiliser l'app pendant ce temps, mais reste dans l'application.")
+            .setPositiveButton("Lancer") { _, _ ->
+                lifecycleScope.launch {
+                    var done = 0
+                    for (d in todo) {
+                        val tracks = withContext(Dispatchers.IO) {
+                            try { DiscogsApi.tracklist(d.releaseId, token) } catch (e: Exception) { emptyList() }
+                        }
+                        if (tracks.isNotEmpty()) {
+                            Library.get(this@MainActivity, d.id)?.let {
+                                Library.update(this@MainActivity, it.copy(tracks = tracks))
+                            }
+                            done++
+                        }
+                        if (done % 10 == 0) status.text = "Morceaux récupérés : $done/${todo.size}"
+                    }
+                    status.text = "Morceaux récupérés pour $done disques."
+                }
+            }
+            .setNegativeButton("Annuler", null)
+            .show()
+    }
+
     // ---------- Divers ----------
 
     private fun reset() {
@@ -1351,6 +1541,13 @@ class MainActivity : AppCompatActivity() {
                         "précis (code-barres) au plus large (artiste + titre).\n" +
                         "5. Touche un résultat pour ouvrir sa fiche, ou le bouton + pour l'ajouter " +
                         "à ta collection ou à ta wantlist.\n\n" +
+                        "Sauvegarde (menu ⋮) : crée une archive ZIP avec toutes tes fiches et photos, à ranger " +
+                        "sur Drive ou ailleurs. C'est le seul filet si tu perds le téléphone.\n\n" +
+                        "Importer ma collection Discogs verse tes disques déjà enregistrés dans la " +
+                        "bibliothèque locale. Récupérer les morceaux complète les tracklists, ce qui " +
+                        "permet de chercher un titre de morceau et de retrouver la caisse.\n\n" +
+                        "Dans la bibliothèque, appui long sur une fiche pour en sélectionner plusieurs " +
+                        "et les déplacer d'une caisse à l'autre d'un coup.\n\n" +
                         "Ma bibliothèque (menu ⋮) est ton catalogue local : chaque disque y garde ses photos, " +
                         "son lien Discogs, sa caisse de rangement et tes notes. Recherche par texte, " +
                         "tri A→Z ou par ajout, filtres par genre et par caisse. La fiche accepte " +

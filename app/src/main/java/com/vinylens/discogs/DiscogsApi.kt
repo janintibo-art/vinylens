@@ -174,6 +174,78 @@ object DiscogsApi {
         return out
     }
 
+    /** Liste des morceaux d'un pressage, au format « A1 · Acid Eiffel ». */
+    @Throws(IOException::class)
+    fun tracklist(releaseId: Int, token: String): List<String> {
+        val body = call(req("$BASE/releases/$releaseId", token).build(), "lire le pressage")
+        val arr = JSONObject(body).optJSONArray("tracklist") ?: return emptyList()
+        val out = ArrayList<String>()
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            if (o.optString("type_") == "heading") continue
+            val pos = o.optString("position")
+            val title = o.optString("title")
+            if (title.isBlank()) continue
+            out.add(if (pos.isBlank()) title else "$pos · $title")
+            if (out.size >= 40) break
+        }
+        return out
+    }
+
+    /**
+     * Une page de la collection Discogs (100 disques), convertie en fiches locales.
+     * Renvoie les fiches et le nombre total de pages.
+     */
+    @Throws(IOException::class)
+    fun collectionPage(username: String, token: String, page: Int): Pair<List<Disc>, Int> {
+        val url = "$BASE/users/${enc(username)}/collection/folders/0/releases" +
+                "?page=$page&per_page=100&sort=added&sort_order=desc"
+        val root = JSONObject(call(req(url, token).build(), "lire ta collection"))
+        val pages = root.optJSONObject("pagination")?.optInt("pages", 1) ?: 1
+        val arr = root.optJSONArray("releases") ?: return emptyList<Disc>() to pages
+
+        val out = ArrayList<Disc>()
+        for (i in 0 until arr.length()) {
+            val item = arr.optJSONObject(i) ?: continue
+            val info = item.optJSONObject("basic_information") ?: continue
+
+            fun names(key: String, field: String): List<String> {
+                val a = info.optJSONArray(key) ?: return emptyList()
+                return (0 until a.length()).mapNotNull { a.optJSONObject(it)?.optString(field) }
+                    .filter { it.isNotBlank() }
+            }
+            fun strings(key: String): List<String> {
+                val a = info.optJSONArray(key) ?: return emptyList()
+                return (0 until a.length()).map { a.optString(it) }.filter { it.isNotBlank() }
+            }
+
+            val releaseId = info.optInt("id")
+            val labels = info.optJSONArray("labels")
+            val firstLabel = labels?.optJSONObject(0)
+            // « The Prodigy (2) » : Discogs numérote les homonymes, on nettoie
+            val artist = names("artists", "name").joinToString(", ")
+                .replace(Regex("\\s*\\(\\d+\\)"), "")
+
+            out.add(
+                Disc(
+                    id = System.currentTimeMillis() + i,
+                    artist = artist,
+                    title = info.optString("title"),
+                    catno = firstLabel?.optString("catno").orEmpty(),
+                    label = firstLabel?.optString("name").orEmpty(),
+                    year = info.optInt("year").takeIf { it > 0 }?.toString().orEmpty(),
+                    format = names("formats", "name").joinToString(", "),
+                    genres = (strings("genres") + strings("styles")).distinct(),
+                    releaseId = releaseId,
+                    discogsUrl = "https://www.discogs.com/release/$releaseId",
+                    coverUrl = info.optString("cover_image").ifBlank { info.optString("thumb") },
+                    inDiscogs = true
+                )
+            )
+        }
+        return out to pages
+    }
+
     // ---------- Compte ----------
 
     /** Vérifie le jeton et renvoie le pseudo Discogs associé. */

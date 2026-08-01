@@ -260,6 +260,30 @@
                 android:textSize="12sp"
                 android:visibility="gone" />
 
+            <!-- Morceaux -->
+            <TextView
+                android:id="@+id/tracksLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:fontFamily="@font/poppins_medium"
+                android:letterSpacing="0.12"
+                android:text="@string/disc_tracks"
+                android:textColor="@color/gold_deep"
+                android:textSize="10sp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tracksValue"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:fontFamily="@font/poppins"
+                android:lineSpacingExtra="3dp"
+                android:textColor="@color/ink"
+                android:textSize="13sp"
+                android:visibility="gone" />
+
             <!-- Actions -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnDiscogs"

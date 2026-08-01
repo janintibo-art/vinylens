@@ -20,6 +20,7 @@ data class Disc(
     val country: String = "",
     val format: String = "",
     val genres: List<String> = emptyList(),
+    val tracks: List<String> = emptyList(),
     val releaseId: Int = 0,
     val discogsUrl: String = "",
     val coverUrl: String = "",
@@ -54,13 +55,23 @@ data class Disc(
         if (query.isBlank()) return true
         val q = query.trim().lowercase()
         return listOf(artist, title, catno, label, box, notes, year, format)
-            .any { it.lowercase().contains(q) } || genres.any { it.lowercase().contains(q) }
+            .any { it.lowercase().contains(q) } ||
+                genres.any { it.lowercase().contains(q) } ||
+                tracks.any { it.lowercase().contains(q) }
+    }
+
+    /** Le morceau qui a fait mouche : c'est lui qu'on affiche dans la liste. */
+    fun matchingTrack(query: String): String? {
+        if (query.isBlank()) return null
+        val q = query.trim().lowercase()
+        if (listOf(artist, title, catno, label).any { it.lowercase().contains(q) }) return null
+        return tracks.firstOrNull { it.lowercase().contains(q) }
     }
 
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id); put("artist", artist); put("title", title); put("catno", catno)
         put("label", label); put("year", year); put("country", country); put("format", format)
-        put("genres", JSONArray(genres)); put("releaseId", releaseId); put("discogsUrl", discogsUrl)
+        put("genres", JSONArray(genres)); put("tracks", JSONArray(tracks)); put("releaseId", releaseId); put("discogsUrl", discogsUrl)
         put("coverUrl", coverUrl); put("coverPath", coverPath); put("photos", JSONArray(photos))
         put("box", box); put("notes", notes); put("addedAt", addedAt); put("inDiscogs", inDiscogs)
     }
@@ -97,7 +108,8 @@ object Library {
                         title = o.optString("title"), catno = o.optString("catno"),
                         label = o.optString("label"), year = o.optString("year"),
                         country = o.optString("country"), format = o.optString("format"),
-                        genres = strings(o, "genres"), releaseId = o.optInt("releaseId"),
+                        genres = strings(o, "genres"), tracks = strings(o, "tracks"),
+                        releaseId = o.optInt("releaseId"),
                         discogsUrl = o.optString("discogsUrl"), coverUrl = o.optString("coverUrl"),
                         coverPath = o.optString("coverPath"), photos = strings(o, "photos"),
                         box = o.optString("box"), notes = o.optString("notes"),
@@ -149,6 +161,9 @@ object Library {
 
     fun boxes(c: Context): List<String> =
         all(c).map { it.box }.filter { it.isNotBlank() }.distinct().sorted()
+
+    /** Fiches encore sans morceaux : utile pour un complément par lots. */
+    fun withoutTracks(c: Context): List<Disc> = all(c).filter { it.releaseId > 0 && it.tracks.isEmpty() }
 
     fun genres(c: Context): List<String> =
         all(c).flatMap { it.genres }.filter { it.isNotBlank() }

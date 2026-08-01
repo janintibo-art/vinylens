@@ -36,6 +36,8 @@ class DiscActivity : AppCompatActivity() {
     private lateinit var genreChips: ChipGroup
     private lateinit var boxValue: TextView
     private lateinit var notesValue: TextView
+    private lateinit var tracksLabel: TextView
+    private lateinit var tracksValue: TextView
     private lateinit var photoList: RecyclerView
     private lateinit var noPhotos: TextView
 
@@ -70,6 +72,8 @@ class DiscActivity : AppCompatActivity() {
         genreChips = findViewById(R.id.genreChips)
         boxValue = findViewById(R.id.boxValue)
         notesValue = findViewById(R.id.notesValue)
+        tracksLabel = findViewById(R.id.tracksLabel)
+        tracksValue = findViewById(R.id.tracksValue)
         photoList = findViewById(R.id.photoList)
         noPhotos = findViewById(R.id.noPhotos)
 
@@ -126,6 +130,11 @@ class DiscActivity : AppCompatActivity() {
 
         boxValue.text = d.box.ifBlank { getString(R.string.disc_box_empty) }
         notesValue.text = d.notes.ifBlank { getString(R.string.disc_notes_empty) }
+
+        val hasTracks = d.tracks.isNotEmpty()
+        tracksLabel.visibility = if (hasTracks) View.VISIBLE else View.GONE
+        tracksValue.visibility = if (hasTracks) View.VISIBLE else View.GONE
+        tracksValue.text = d.tracks.joinToString("\n")
 
         val existing = d.photos.filter { File(it).exists() }
         photoAdapter.submit(existing)
@@ -269,6 +278,7 @@ class DiscActivity : AppCompatActivity() {
             appendLine(d.heading())
             if (d.subheading().isNotBlank()) appendLine(d.subheading())
             if (d.genres.isNotEmpty()) appendLine("Genres : ${d.genres.joinToString(", ")}")
+            if (d.tracks.isNotEmpty()) appendLine("Morceaux : ${d.tracks.joinToString(" / ")}")
             if (d.box.isNotBlank()) appendLine("Rangé dans : ${d.box}")
             if (d.notes.isNotBlank()) appendLine("Notes : ${d.notes}")
             if (d.discogsUrl.isNotBlank()) appendLine(d.discogsUrl)

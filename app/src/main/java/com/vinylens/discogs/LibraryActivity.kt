@@ -10,6 +10,8 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -33,10 +35,22 @@ class LibraryActivity : AppCompatActivity() {
     private var sort = Sort.ARTIST
     private var filter: String? = null      // "genre:Techno" ou "box:Caisse 1"
     private var discs: List<Disc> = emptyList()
+    private var shown: List<Disc> = emptyList()
+    private val selection = LinkedHashSet<Long>()
 
-    private val adapter = DiscAdapter { disc ->
-        startActivity(Intent(this, DiscActivity::class.java).putExtra("id", disc.id))
-    }
+    private lateinit var bulkBar: View
+    private lateinit var bulkCount: TextView
+
+    private val adapter = DiscAdapter(
+        onClick = { disc ->
+            if (selection.isEmpty()) {
+                startActivity(Intent(this, DiscActivity::class.java).putExtra("id", disc.id))
+            } else {
+                toggle(disc)
+            }
+        },
+        onLongClick = { disc -> toggle(disc) }
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,6 +66,11 @@ class LibraryActivity : AppCompatActivity() {
         countLine = findViewById(R.id.countLine)
         recycler = findViewById(R.id.recycler)
         emptyState = findViewById(R.id.emptyState)
+
+        bulkBar = findViewById(R.id.bulkBar)
+        bulkCount = findViewById(R.id.bulkCount)
+        findViewById<View>(R.id.bulkBox).setOnClickListener { bulkChangeBox() }
+        findViewById<View>(R.id.bulkDelete).setOnClickListener { bulkDelete() }
 
         recycler.layoutManager = LinearLayoutManager(this)
         recycler.adapter = adapter
@@ -121,6 +140,81 @@ class LibraryActivity : AppCompatActivity() {
         }
     }
 
+    override fun onBackPressed() {
+        if (selection.isNotEmpty()) {
+            selection.clear()
+            adapter.notifyDataSetChanged()
+            updateBulkBar()
+        } else {
+            @Suppress("DEPRECATION")
+            super.onBackPressed()
+        }
+    }
+
+    private fun toggle(disc: Disc) {
+        if (!selection.add(disc.id)) selection.remove(disc.id)
+        adapter.notifyDataSetChanged()
+        updateBulkBar()
+    }
+
+    private fun updateBulkBar() {
+        bulkBar.visibility = if (selection.isEmpty()) View.GONE else View.VISIBLE
+        bulkCount.text = getString(R.string.bulk_selected, selection.size)
+    }
+
+    private fun selected(): List<Disc> = discs.filter { it.id in selection }
+
+    /** Déplacer cinquante disques d'une caisse à l'autre sans ouvrir cinquante fiches. */
+    private fun bulkChangeBox() {
+        val input = EditText(this)
+        input.hint = getString(R.string.disc_box_hint)
+        input.setText(selected().firstOrNull()?.box.orEmpty())
+        val pad = (16 * resources.displayMetrics.density).toInt()
+        input.setPadding(pad, pad, pad, pad)
+
+        val known = Library.boxes(this)
+        val builder = MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.bulk_selected, selection.size))
+            .setView(input)
+            .setPositiveButton("Déplacer") { _, _ -> applyBox(input.text.toString().trim()) }
+            .setNegativeButton("Annuler", null)
+        if (known.isNotEmpty()) {
+            builder.setNeutralButton("Caisses existantes") { _, _ ->
+                MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.disc_box)
+                    .setItems(known.toTypedArray()) { _, which -> applyBox(known[which]) }
+                    .show()
+            }
+        }
+        builder.show()
+    }
+
+    private fun applyBox(box: String) {
+        selected().forEach { Library.update(this, it.copy(box = box)) }
+        val n = selection.size
+        selection.clear()
+        discs = Library.all(this)
+        buildFilterChips()
+        render()
+        Toast.makeText(this, "$n disques rangés dans « $box »", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun bulkDelete() {
+        val n = selection.size
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Supprimer $n fiches ?")
+            .setMessage("Les fiches et leurs photos seront effacées du téléphone. Ta collection Discogs n'est pas touchée.")
+            .setPositiveButton("Supprimer") { _, _ ->
+                selected().forEach { Library.delete(this, it) }
+                selection.clear()
+                discs = Library.all(this)
+                buildFilterChips()
+                render()
+            }
+            .setNegativeButton("Annuler", null)
+            .show()
+    }
+
     private fun render() {
         val query = searchInput.text.toString()
         var list = discs.filter { it.matches(query) }
@@ -140,7 +234,11 @@ class LibraryActivity : AppCompatActivity() {
             Sort.RECENT -> list.sortedByDescending { it.addedAt }
         }
 
+        shown = list
+        adapter.query = query
+        adapter.selection = selection
         adapter.submit(list)
+        updateBulkBar()
         emptyState.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
         countLine.text = when {
             discs.isEmpty() -> ""
@@ -150,10 +248,14 @@ class LibraryActivity : AppCompatActivity() {
     }
 }
 
-class DiscAdapter(private val onClick: (Disc) -> Unit) :
-    RecyclerView.Adapter<DiscAdapter.VH>() {
+class DiscAdapter(
+    private val onClick: (Disc) -> Unit,
+    private val onLongClick: (Disc) -> Unit
+) : RecyclerView.Adapter<DiscAdapter.VH>() {
 
     private val items = ArrayList<Disc>()
+    var query: String = ""
+    var selection: Set<Long> = emptySet()
 
     fun submit(list: List<Disc>) {
         items.clear()
@@ -168,6 +270,9 @@ class DiscAdapter(private val onClick: (Disc) -> Unit) :
         val boxTag: TextView = v.findViewById(R.id.boxTag)
         val genreTag: TextView = v.findViewById(R.id.genreTag)
         val photoFlag: ImageView = v.findViewById(R.id.photoFlag)
+        val trackHit: TextView = v.findViewById(R.id.trackHit)
+        val card: com.google.android.material.card.MaterialCardView =
+            v as com.google.android.material.card.MaterialCardView
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH =
@@ -199,7 +304,22 @@ class DiscAdapter(private val onClick: (Disc) -> Unit) :
         holder.genreTag.text = d.genres.take(2).joinToString(" · ")
         holder.photoFlag.visibility = if (d.photos.isEmpty()) View.GONE else View.VISIBLE
 
+        val hit = d.matchingTrack(query)
+        holder.trackHit.visibility = if (hit == null) View.GONE else View.VISIBLE
+        holder.trackHit.text = hit?.let { "♪ $it" }
+
+        val picked = d.id in selection
+        holder.card.strokeWidth = if (picked) 3 * holder.itemView.resources.displayMetrics.density.toInt() else
+            holder.itemView.resources.displayMetrics.density.toInt()
+        holder.card.setStrokeColor(
+            androidx.core.content.ContextCompat.getColorStateList(
+                holder.itemView.context,
+                if (picked) R.color.gold else R.color.line
+            )
+        )
+
         holder.itemView.setOnClickListener { onClick(d) }
+        holder.itemView.setOnLongClickListener { onLongClick(d); true }
     }
 
     override fun getItemCount(): Int = items.size
