@@ -11,6 +11,7 @@
     <color name="owned">#8CC28F</color>
     <color name="owned_wash">#22301F</color>
     <color name="shadow_warm">#000000</color>
+
     <color name="paper_lit">#221B10</color>
     <color name="paper_shade">#0E0B06</color>
     <color name="slot_top">#241D13</color>
@@ -19,4 +20,9 @@
     <color name="note_top">#3A2C11</color>
     <color name="note_bottom">#2A2009</color>
     <color name="bar_shadow">#66000000</color>
+    <color name="gold_lit">#F2C558</color>
+    <color name="gold_edge">#7A5205</color>
+    <color name="on_gold">#20180A</color>
+    <color name="field_fill">#241E15</color>
+    <color name="field_stroke">#3E3425</color>
 </resources>

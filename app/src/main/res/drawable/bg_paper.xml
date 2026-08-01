@@ -12,6 +12,20 @@
                 android:endColor="@color/paper_shade" />
         </shape>
     </item>
+    <item
+        android:width="360dp"
+        android:height="360dp"
+        android:gravity="start|top"
+        android:start="-150dp"
+        android:top="60dp"
+        android:drawable="@drawable/ic_grooves" />
+    <item
+        android:width="300dp"
+        android:height="300dp"
+        android:gravity="end|bottom"
+        android:end="-140dp"
+        android:bottom="40dp"
+        android:drawable="@drawable/ic_grooves" />
     <item>
         <bitmap
             android:src="@drawable/paper_grain"

@@ -42,8 +42,8 @@
         <item name="textAppearanceTitleMedium">@style/Text.Title.Medium</item>
         <item name="textAppearanceTitleSmall">@style/Text.Title.Small</item>
 
-        <item name="android:statusBarColor">@color/paper_high</item>
-        <item name="android:navigationBarColor">@color/paper_high</item>
+        <item name="android:statusBarColor">@color/paper_lit</item>
+        <item name="android:navigationBarColor">@color/paper_shade</item>
     </style>
 
     <style name="Theme.VinyLens" parent="Theme.VinyLens.Base">

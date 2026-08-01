@@ -23,7 +23,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.checkbox.MaterialCheckBox
@@ -125,8 +124,8 @@ class MainActivity : AppCompatActivity() {
         imgFront.setOnClickListener { chooseSource(Side.FRONT) }
         imgBack.setOnClickListener { chooseSource(Side.BACK) }
 
-        findViewById<MaterialButton>(R.id.btnSearch).setOnClickListener { search() }
-        findViewById<MaterialButton>(R.id.btnWeb).setOnClickListener {
+        findViewById<View>(R.id.btnSearch).setOnClickListener { search() }
+        findViewById<View>(R.id.btnWeb).setOnClickListener {
             val c = criteria()
             if (c.isEmpty()) toast("Rien à chercher.") else openUrl(DiscogsApi.webSearchUrl(c))
         }
@@ -539,8 +538,8 @@ class MainActivity : AppCompatActivity() {
             card.strokeColor = ContextCompat.getColor(this, R.color.line)
             card.strokeWidth = (1 * resources.displayMetrics.density).toInt()
         }
-        lblFront.text = getString(R.string.slot_front)
-        lblBack.text = getString(R.string.slot_back)
+        lblFront.text = getString(R.string.slot_front_sub)
+        lblBack.text = getString(R.string.slot_back_sub)
         queryInput.setText("")
         catnoInput.setText("")
         chips.removeAllViews()

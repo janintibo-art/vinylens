@@ -2,10 +2,12 @@
     <string name="app_name">VinyLens</string>
     <string name="hint_query">Artiste + titre</string>
     <string name="hint_catno">N° de catalogue ou code-barres</string>
-    <string name="slot_front">Recto · pochette</string>
-    <string name="slot_back">Verso · dos</string>
-    <string name="slot_front_done">Recto lu ✓</string>
-    <string name="slot_back_done">Verso lu ✓</string>
+    <string name="slot_front">Recto</string>
+    <string name="slot_front_sub">POCHETTE</string>
+    <string name="slot_back">Verso</string>
+    <string name="slot_back_sub">DOS</string>
+    <string name="slot_front_done">LUE ✓</string>
+    <string name="slot_back_done">LU ✓</string>
     <string name="btn_search">Chercher</string>
     <string name="btn_web">Ouvrir cette recherche sur le site Discogs</string>
     <string name="vinyl_only">Vinyles uniquement</string>
