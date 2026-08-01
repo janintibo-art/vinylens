@@ -26,7 +26,17 @@ jobs:
           gradle-version: '8.9'
 
       - name: Build debug APK
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: |
+          set -o pipefail
+          gradle assembleDebug --no-daemon --console=plain 2>&1 | tee build.log
+
+      - name: Erreurs de compilation
+        if: failure()
+        run: |
+          echo "================= ERREURS KOTLIN ================="
+          grep -E "^e: |^ERROR|error:" build.log | head -40 || echo "(aucune ligne d'erreur isolee)"
+          echo "================================================="
+
 
       - name: Rename APK
         run: cp app/build/outputs/apk/debug/app-debug.apk vinylens-${{ github.run_number }}.apk
