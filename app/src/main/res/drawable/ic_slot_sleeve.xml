@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="56dp" android:height="56dp"
+    android:viewportWidth="64" android:viewportHeight="64"
+    android:tint="@color/ink_soft" android:alpha="0.45">
+    <!-- pochette -->
+    <path android:strokeColor="#000000" android:strokeWidth="2.4" android:fillColor="#00000000"
+        android:pathData="M10,12h34a2,2 0 0,1 2,2v36a2,2 0 0,1 -2,2h-34a2,2 0 0,1 -2,-2v-36a2,2 0 0,1 2,-2z" />
+    <!-- disque qui dépasse -->
+    <path android:strokeColor="#000000" android:strokeWidth="2.4" android:fillColor="#00000000"
+        android:pathData="M44,20a12,12 0 1,1 -0.1,0z" />
+    <path android:fillColor="#000000" android:pathData="M44,30.5a1.5,1.5 0 1,0 0.1,0z" />
+</vector>

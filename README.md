@@ -122,3 +122,16 @@ L'APK est signé avec la clé *debug* : parfait pour un usage perso, pas publiab
   (`drawable-nodpi/ic_launcher_fg.png` dans la zone sûre + `ic_launcher_bg.png` en fond)
 - Logo dans la barre du haut : `drawable-nodpi/logo_vinylens.png`, avec une variante
   au lettrage clair dans `drawable-night-nodpi/` pour le mode sombre
+
+## Direction artistique (v2)
+
+- Palette dédiée (`values/colors.xml` + `values-night/`) : papier crème, encre chaude, or #D9990D.
+  Elle **remplace intégralement la palette mauve par défaut de Material 3**, y compris
+  `colorSurface`, `colorSurfaceVariant` et `colorOutline`, sinon le mauve ressort par endroits.
+- Fond texturé : grain de papier tuilable (`drawable-nodpi/paper_grain.png`) posé en
+  `android:windowBackground` par-dessus le crème, avec une variante claire en mode nuit.
+- Relief : cartes `MaterialCardView` (rayon 16-18 dp, élévation 2-3 dp, filet 1 dp) pour les
+  vignettes recto/verso et chaque résultat ; le liseré d'une vignette passe en or quand la face
+  est lue.
+- Typographie : titres et libellés en serif (Noto Serif système), n° de catalogue en monospace.
+- État vide illustré, pastilles numérotées 1 / 2 sur les vignettes, encart doré pour les messages.

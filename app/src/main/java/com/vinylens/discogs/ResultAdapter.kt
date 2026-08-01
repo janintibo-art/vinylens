@@ -58,6 +58,9 @@ class ResultAdapter(
         holder.btnAdd.setImageResource(
             if (owned) R.drawable.ic_in_collection else R.drawable.ic_add_collection
         )
+        holder.btnAdd.setBackgroundResource(
+            if (owned) R.drawable.bg_circle_owned else R.drawable.bg_circle_gold
+        )
         holder.btnAdd.contentDescription = holder.itemView.context.getString(
             if (owned) R.string.in_collection else R.string.add_to_collection
         )

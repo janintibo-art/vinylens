@@ -1,5 +1,15 @@
 <resources>
-    <color name="vinyl_ink">#1F1B16</color>
-    <color name="vinyl_gold">#E8A317</color>
-    <color name="toolbar_bg">#FFFCF7</color>
+    <!-- Palette « boutique de disques » : papier crème, encre chaude, or -->
+    <color name="paper">#F7EEDD</color>
+    <color name="paper_high">#FFFAF0</color>
+    <color name="paper_sunk">#EFE3CE</color>
+    <color name="ink">#211C16</color>
+    <color name="ink_soft">#6E6153</color>
+    <color name="line">#DCCBAF</color>
+    <color name="gold">#D9990D</color>
+    <color name="gold_deep">#A87209</color>
+    <color name="gold_wash">#F6E7C2</color>
+    <color name="owned">#3E6F45</color>
+    <color name="owned_wash">#DCE9DA</color>
+    <color name="shadow_warm">#4A3418</color>
 </resources>

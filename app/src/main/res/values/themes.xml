@@ -1,8 +1,77 @@
 <resources>
     <style name="Theme.VinyLens" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/vinyl_ink</item>
-        <item name="colorOnPrimary">#FFFFFF</item>
-        <item name="colorSecondary">@color/vinyl_gold</item>
-        <item name="colorTertiary">@color/vinyl_gold</item>
+        <!-- on neutralise la palette mauve par défaut de Material 3 -->
+        <item name="colorPrimary">@color/gold</item>
+        <item name="colorOnPrimary">@color/ink</item>
+        <item name="colorPrimaryContainer">@color/gold_wash</item>
+        <item name="colorOnPrimaryContainer">@color/ink</item>
+        <item name="colorSecondary">@color/gold_deep</item>
+        <item name="colorOnSecondary">@color/paper_high</item>
+        <item name="colorSecondaryContainer">@color/gold_wash</item>
+        <item name="colorOnSecondaryContainer">@color/ink</item>
+        <item name="colorTertiary">@color/gold_deep</item>
+
+        <item name="android:colorBackground">@color/paper</item>
+        <item name="colorSurface">@color/paper_high</item>
+        <item name="colorSurfaceVariant">@color/paper_sunk</item>
+        <item name="colorSurfaceContainer">@color/paper_high</item>
+        <item name="colorSurfaceContainerLow">@color/paper_high</item>
+        <item name="colorSurfaceContainerHigh">@color/paper_sunk</item>
+        <item name="colorOnBackground">@color/ink</item>
+        <item name="colorOnSurface">@color/ink</item>
+        <item name="colorOnSurfaceVariant">@color/ink_soft</item>
+        <item name="colorOutline">@color/line</item>
+        <item name="colorOutlineVariant">@color/line</item>
+        <item name="android:textColorHint">@color/ink_soft</item>
+
+        <item name="android:windowBackground">@drawable/bg_paper</item>
+        <item name="elevationOverlayEnabled">false</item>
+
+        <item name="chipStyle">@style/Widget.VinyLens.Chip</item>
+        <item name="chipStandaloneStyle">@style/Widget.VinyLens.Chip</item>
+        <item name="materialAlertDialogTheme">@style/Theme.VinyLens.Dialog</item>
+    </style>
+
+    <style name="Widget.VinyLens.Chip" parent="Widget.Material3.Chip.Assist">
+        <item name="chipBackgroundColor">@color/paper_high</item>
+        <item name="chipStrokeColor">@color/gold</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="android:textColor">@color/ink</item>
+        <item name="chipCornerRadius">14dp</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="Theme.VinyLens.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorSurface">@color/paper_high</item>
+        <item name="colorOnSurface">@color/ink</item>
+        <item name="colorPrimary">@color/gold_deep</item>
+    </style>
+
+    <!-- Titres en serif : c'est ce qui donne le ton « pochette de disque » -->
+    <style name="Text.VinyLens.Title" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:fontFamily">serif</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/ink</item>
+    </style>
+
+    <style name="Text.VinyLens.Label" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:fontFamily">serif</item>
+        <item name="android:textColor">@color/ink_soft</item>
+        <item name="android:letterSpacing">0.08</item>
+    </style>
+
+    <style name="Widget.VinyLens.Field" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">14dp</item>
+        <item name="boxCornerRadiusTopEnd">14dp</item>
+        <item name="boxCornerRadiusBottomStart">14dp</item>
+        <item name="boxCornerRadiusBottomEnd">14dp</item>
+        <item name="boxStrokeColor">@color/gold_deep</item>
+        <item name="boxBackgroundColor">@color/paper_high</item>
+        <item name="hintTextColor">@color/ink_soft</item>
+    </style>
+
+    <style name="Shape.VinyLens.Cover" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">10dp</item>
     </style>
 </resources>

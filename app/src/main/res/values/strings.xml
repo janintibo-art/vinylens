@@ -2,8 +2,10 @@
     <string name="app_name">VinyLens</string>
     <string name="hint_query">Artiste + titre</string>
     <string name="hint_catno">N° de catalogue ou code-barres</string>
-    <string name="slot_front">Recto (pochette)</string>
-    <string name="slot_back">Verso (dos / étiquette)</string>
+    <string name="slot_front">Recto · pochette</string>
+    <string name="slot_back">Verso · dos</string>
+    <string name="slot_front_done">Recto lu ✓</string>
+    <string name="slot_back_done">Verso lu ✓</string>
     <string name="btn_search">Chercher</string>
     <string name="btn_web">Ouvrir cette recherche sur le site Discogs</string>
     <string name="vinyl_only">Vinyles uniquement</string>
@@ -13,5 +15,7 @@
     <string name="menu_reset">Nouvelle recherche</string>
     <string name="add_to_collection">Ajouter à ma collection</string>
     <string name="in_collection">Déjà dans ma collection</string>
-    <string name="status_idle">Photographie le recto, puis le verso : le n° de catalogue du dos permet d\'identifier le pressage exact.</string>
+    <string name="empty_title">Le bac est vide</string>
+    <string name="empty_body">Photographie la pochette, puis le dos : les pressages trouvés sur Discogs s\'empileront ici.</string>
+    <string name="status_idle">Photographie le recto, puis le verso : le n° de catalogue du dos identifie le pressage exact.</string>
 </resources>

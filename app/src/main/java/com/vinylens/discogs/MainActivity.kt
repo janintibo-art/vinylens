@@ -15,15 +15,17 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
@@ -51,6 +53,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var progress: ProgressBar
     private lateinit var status: TextView
     private lateinit var recycler: RecyclerView
+    private lateinit var emptyState: View
+    private lateinit var cardFront: MaterialCardView
+    private lateinit var cardBack: MaterialCardView
 
     private val prefs: SharedPreferences by lazy {
         getSharedPreferences("vinylens", Context.MODE_PRIVATE)
@@ -106,12 +111,17 @@ class MainActivity : AppCompatActivity() {
         progress = findViewById(R.id.progress)
         status = findViewById(R.id.status)
         recycler = findViewById(R.id.recycler)
+        emptyState = findViewById(R.id.emptyState)
+        cardFront = findViewById(R.id.cardFront)
+        cardBack = findViewById(R.id.cardBack)
 
         recycler.layoutManager = LinearLayoutManager(this)
         recycler.adapter = adapter
 
         owned.addAll(prefs.getStringSet("owned", emptySet()).orEmpty().mapNotNull { it.toIntOrNull() })
 
+        cardFront.setOnClickListener { chooseSource(Side.FRONT) }
+        cardBack.setOnClickListener { chooseSource(Side.BACK) }
         imgFront.setOnClickListener { chooseSource(Side.FRONT) }
         imgBack.setOnClickListener { chooseSource(Side.BACK) }
 
@@ -151,7 +161,7 @@ class MainActivity : AppCompatActivity() {
     private fun chooseSource(side: Side) {
         pendingSide = side
         val titre = if (side == Side.FRONT) "Recto (pochette)" else "Verso (dos ou étiquette centrale)"
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(titre)
             .setItems(arrayOf("Appareil photo", "Galerie")) { _, which ->
                 if (which == 0) shootPhoto() else pickImage.launch("image/*")
@@ -172,8 +182,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onImage(side: Side, uri: Uri) {
-        if (side == Side.FRONT) imgFront.load(uri) else imgBack.load(uri)
+        val img = if (side == Side.FRONT) imgFront else imgBack
+        img.setPadding(0, 0, 0, 0)
+        img.load(uri)
+        val card = if (side == Side.FRONT) cardFront else cardBack
+        card.strokeColor = ContextCompat.getColor(this, R.color.gold)
+        card.strokeWidth = (2 * resources.displayMetrics.density).toInt()
         runOcr(side, uri)
+    }
+
+    private fun setResultsVisible(hasResults: Boolean) {
+        emptyState.visibility = if (hasResults) View.GONE else View.VISIBLE
     }
 
     // ---------- OCR local ----------
@@ -209,7 +228,7 @@ class MainActivity : AppCompatActivity() {
     private fun handleFront(text: com.google.mlkit.vision.text.Text) {
         frontLines = OcrQuery.candidates(text)
         frontDone = true
-        lblFront.text = "Recto ✓"
+        lblFront.text = getString(R.string.slot_front_done)
         if (queryInput.text.isBlank() && frontLines.isNotEmpty()) {
             queryInput.setText(OcrQuery.suggestQuery(frontLines))
         }
@@ -221,7 +240,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleBack(text: com.google.mlkit.vision.text.Text) {
         backDone = true
-        lblBack.text = "Verso ✓"
+        lblBack.text = getString(R.string.slot_back_done)
 
         val barcode = OcrQuery.extractBarcode(text)
         val catnos = OcrQuery.extractCatalogNumbers(text)
@@ -316,6 +335,7 @@ class MainActivity : AppCompatActivity() {
                     if (results.isNotEmpty()) {
                         progress.visibility = View.GONE
                         adapter.submit(results)
+                        setResultsVisible(true)
                         val precision = if (index == 0) "" else " (critères élargis)"
                         status.text = "${results.size} pressages pour ${c.label()}$precision."
                         checkOwnership(results)
@@ -324,6 +344,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 progress.visibility = View.GONE
                 adapter.submit(emptyList())
+                setResultsVisible(false)
                 status.text = "Aucun résultat. Vérifie le n° de catalogue ou garde seulement l'artiste."
             } catch (e: Exception) {
                 progress.visibility = View.GONE
@@ -365,7 +386,7 @@ class MainActivity : AppCompatActivity() {
             "Ouvrir la fiche Discogs"
         )
 
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(release.title)
             .setItems(options) { _, which ->
                 when (which) {
@@ -431,7 +452,7 @@ class MainActivity : AppCompatActivity() {
         val etat = if (username.isBlank()) "Aucun compte connecté."
         else "Connecté : $username\nDossier : $folderName"
 
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle("Compte Discogs")
             .setMessage(
                 "$etat\n\nDiscogs.com > Settings > Developers > Generate token.\n" +
@@ -487,7 +508,7 @@ class MainActivity : AppCompatActivity() {
                 progress.visibility = View.GONE
                 if (fs.isEmpty()) { toast("Aucun dossier trouvé."); return@launch }
                 val labels = fs.map { "${it.name} (${it.count})" }.toTypedArray()
-                AlertDialog.Builder(this@MainActivity)
+                MaterialAlertDialogBuilder(this@MainActivity)
                     .setTitle("Dossier de destination")
                     .setItems(labels) { _, which ->
                         val f = fs[which]
@@ -507,20 +528,28 @@ class MainActivity : AppCompatActivity() {
     private fun reset() {
         frontDone = false; backDone = false
         frontLines = emptyList(); backLines = emptyList()
-        imgFront.setImageResource(R.drawable.ic_slot_empty)
-        imgBack.setImageResource(R.drawable.ic_slot_empty)
+        val pad = (18 * resources.displayMetrics.density).toInt()
+        for (img in listOf(imgFront, imgBack)) {
+            img.setImageResource(R.drawable.ic_slot_sleeve)
+            img.setPadding(pad, pad, pad, pad)
+        }
+        for (card in listOf(cardFront, cardBack)) {
+            card.strokeColor = ContextCompat.getColor(this, R.color.line)
+            card.strokeWidth = (1 * resources.displayMetrics.density).toInt()
+        }
         lblFront.text = getString(R.string.slot_front)
         lblBack.text = getString(R.string.slot_back)
         queryInput.setText("")
         catnoInput.setText("")
         chips.removeAllViews()
         adapter.submit(emptyList())
+        setResultsVisible(false)
         status.text = if (username.isBlank()) getString(R.string.status_idle)
         else "Connecté : $username · dossier « $folderName »."
     }
 
     private fun showHelp() {
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle("Comment ça marche")
             .setMessage(
                 "1. Recto : la pochette, bien à plat → artiste et titre.\n" +

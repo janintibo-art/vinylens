@@ -3,16 +3,16 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:fitsSystemWindows="true">
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@color/toolbar_bg"
-        app:contentInsetStartWithNavigation="0dp"
-        app:contentInsetStart="16dp">
+        android:background="@color/paper_high"
+        app:contentInsetStart="16dp"
+        app:contentInsetStartWithNavigation="0dp">
 
         <ImageView
             android:layout_width="wrap_content"
@@ -22,76 +22,145 @@
             android:src="@drawable/logo_vinylens" />
     </com.google.android.material.appbar.MaterialToolbar>
 
-    <!-- Recto / Verso -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/line" />
+
+    <!-- ===== Les deux prises de vue ===== -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:paddingTop="10dp">
+        android:paddingStart="14dp"
+        android:paddingTop="14dp"
+        android:paddingEnd="14dp">
 
-        <LinearLayout
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardFront"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:orientation="vertical">
+            app:cardBackgroundColor="@color/paper_high"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="3dp"
+            app:strokeColor="@color/line"
+            app:strokeWidth="1dp">
 
-            <ImageView
-                android:id="@+id/imgFront"
-                android:layout_width="match_parent"
-                android:layout_height="108dp"
-                android:background="@drawable/slot_frame"
-                android:contentDescription="@string/slot_front"
-                android:scaleType="centerCrop"
-                android:src="@drawable/ic_slot_empty" />
-
-            <TextView
-                android:id="@+id/lblFront"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:gravity="center"
-                android:text="@string/slot_front"
-                android:textSize="12sp" />
-        </LinearLayout>
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="104dp">
+
+                    <ImageView
+                        android:id="@+id/imgFront"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bg_slot"
+                        android:contentDescription="@string/slot_front"
+                        android:padding="18dp"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/ic_slot_sleeve" />
+
+                    <TextView
+                        android:id="@+id/badgeFront"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:layout_gravity="top|start"
+                        android:layout_margin="6dp"
+                        android:background="@drawable/bg_step_badge"
+                        android:gravity="center"
+                        android:text="1"
+                        android:textColor="@color/ink"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </FrameLayout>
+
+                <TextView
+                    android:id="@+id/lblFront"
+                    style="@style/Text.VinyLens.Label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:gravity="center"
+                    android:text="@string/slot_front" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <Space
-            android:layout_width="10dp"
+            android:layout_width="12dp"
             android:layout_height="1dp" />
 
-        <LinearLayout
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardBack"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:orientation="vertical">
+            app:cardBackgroundColor="@color/paper_high"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="3dp"
+            app:strokeColor="@color/line"
+            app:strokeWidth="1dp">
 
-            <ImageView
-                android:id="@+id/imgBack"
-                android:layout_width="match_parent"
-                android:layout_height="108dp"
-                android:background="@drawable/slot_frame"
-                android:contentDescription="@string/slot_back"
-                android:scaleType="centerCrop"
-                android:src="@drawable/ic_slot_empty" />
-
-            <TextView
-                android:id="@+id/lblBack"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:gravity="center"
-                android:text="@string/slot_back"
-                android:textSize="12sp" />
-        </LinearLayout>
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="104dp">
+
+                    <ImageView
+                        android:id="@+id/imgBack"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bg_slot"
+                        android:contentDescription="@string/slot_back"
+                        android:padding="18dp"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/ic_slot_sleeve" />
+
+                    <TextView
+                        android:id="@+id/badgeBack"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:layout_gravity="top|start"
+                        android:layout_margin="6dp"
+                        android:background="@drawable/bg_step_badge"
+                        android:gravity="center"
+                        android:text="2"
+                        android:textColor="@color/ink"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </FrameLayout>
+
+                <TextView
+                    android:id="@+id/lblBack"
+                    style="@style/Text.VinyLens.Label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:gravity="center"
+                    android:text="@string/slot_back" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 
+    <!-- ===== Saisie ===== -->
     <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.VinyLens.Field"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
-        android:layout_marginEnd="12dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginStart="14dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="14dp"
         android:hint="@string/hint_query">
 
         <com.google.android.material.textfield.TextInputEditText
@@ -99,29 +168,34 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:imeOptions="actionNext"
-            android:inputType="text" />
+            android:inputType="text"
+            android:textSize="15sp" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.VinyLens.Field"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
-        android:layout_marginEnd="12dp"
+        android:layout_marginStart="14dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="14dp"
         android:hint="@string/hint_catno">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/catnoInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:fontFamily="monospace"
             android:imeOptions="actionSearch"
-            android:inputType="textCapCharacters" />
+            android:inputType="textCapCharacters"
+            android:textSize="15sp" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
         android:scrollbars="none">
 
         <com.google.android.material.chip.ChipGroup
@@ -136,60 +210,112 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:paddingTop="6dp">
+        android:paddingStart="14dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="14dp">
 
         <com.google.android.material.checkbox.MaterialCheckBox
             android:id="@+id/vinylOnly"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:checked="true"
             android:text="@string/vinyl_only"
+            android:textColor="@color/ink_soft"
             android:textSize="13sp" />
-
-        <Space
-            android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:layout_weight="1" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSearch"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/btn_search" />
+            android:fontFamily="serif"
+            android:letterSpacing="0.04"
+            android:text="@string/btn_search"
+            android:textStyle="bold"
+            app:cornerRadius="22dp"
+            app:icon="@drawable/ic_disc"
+            app:iconTint="@color/ink" />
     </LinearLayout>
 
     <TextView
         android:id="@+id/status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="14dp"
+        android:background="@drawable/bg_note"
         android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:paddingTop="6dp"
-        android:paddingBottom="6dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="10dp"
         android:text="@string/status_idle"
+        android:textColor="@color/ink"
         android:textSize="13sp" />
 
     <ProgressBar
         android:id="@+id/progress"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="3dp"
+        android:layout_marginTop="6dp"
         android:indeterminate="true"
+        android:indeterminateTint="@color/gold"
         android:visibility="gone" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recycler"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:clipToPadding="false" />
+        android:layout_weight="1">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/emptyState"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <ImageView
+                android:layout_width="86dp"
+                android:layout_height="86dp"
+                android:alpha="0.35"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_disc" />
+
+            <TextView
+                style="@style/Text.VinyLens.Title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:gravity="center"
+                android:text="@string/empty_title" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center"
+                android:text="@string/empty_body"
+                android:textColor="@color/ink_soft"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </FrameLayout>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnWeb"
         style="@style/Widget.Material3.Button.TextButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/btn_web" />
+        android:text="@string/btn_web"
+        android:textColor="@color/gold_deep"
+        android:textSize="13sp" />
 </LinearLayout>

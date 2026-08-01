@@ -1,3 +1,14 @@
 <resources>
-    <color name="toolbar_bg">#17140F</color>
+    <color name="paper">#151109</color>
+    <color name="paper_high">#221C14</color>
+    <color name="paper_sunk">#1A150E</color>
+    <color name="ink">#F3E9D6</color>
+    <color name="ink_soft">#AD9F8B</color>
+    <color name="line">#3D3324</color>
+    <color name="gold">#E9B12A</color>
+    <color name="gold_deep">#F0C862</color>
+    <color name="gold_wash">#33280F</color>
+    <color name="owned">#8CC28F</color>
+    <color name="owned_wash">#22301F</color>
+    <color name="shadow_warm">#000000</color>
 </resources>
