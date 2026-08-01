@@ -55,7 +55,8 @@ object Backup {
      * Restauration fusionnante : les fiches déjà présentes (même identifiant) sont conservées,
      * on n'écrase donc jamais un travail en cours par une archive plus ancienne.
      */
-    fun restore(c: Context, uri: Uri): Result = try {
+    fun restore(c: Context, uri: Uri): Result {
+      return try {
         val tmp = File(c.cacheDir, "restore").apply { deleteRecursively(); mkdirs() }
         var photos = 0
 
@@ -113,8 +114,9 @@ object Backup {
 
         tmp.deleteRecursively()
         Result(addedDiscs, addedItems, photos)
-    } catch (e: Exception) {
+      } catch (e: Exception) {
         Result(0, 0, 0, e.message ?: "Restauration impossible.")
+      }
     }
 
     /** Les chemins absolus de l'ancien téléphone sont réécrits vers ce stockage-ci. */
@@ -139,7 +141,8 @@ object Backup {
         return item.copy(frontPath = fix(item.frontPath), backPath = fix(item.backPath))
     }
 
-    private fun readDiscs(c: Context, f: File): List<Disc> = try {
+    private fun readDiscs(c: Context, f: File): List<Disc> {
+      return try {
         val backup = File(c.filesDir, "vinylens_library.json.tmpread")
         f.copyTo(backup, overwrite = true)
         val arr = org.json.JSONArray(backup.readText())
@@ -165,8 +168,9 @@ object Backup {
         }
         backup.delete()
         out
-    } catch (e: Exception) {
+      } catch (e: Exception) {
         emptyList()
+      }
     }
 
     private fun readItems(f: File): List<Item> = try {
