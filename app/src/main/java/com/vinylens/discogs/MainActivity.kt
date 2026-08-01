@@ -184,6 +184,7 @@ class MainActivity : AppCompatActivity() {
     private fun onImage(side: Side, uri: Uri) {
         val img = if (side == Side.FRONT) imgFront else imgBack
         img.setPadding(0, 0, 0, 0)
+        img.scaleType = ImageView.ScaleType.CENTER_CROP
         img.load(uri)
         val card = if (side == Side.FRONT) cardFront else cardBack
         card.strokeColor = ContextCompat.getColor(this, R.color.gold)
@@ -528,9 +529,10 @@ class MainActivity : AppCompatActivity() {
     private fun reset() {
         frontDone = false; backDone = false
         frontLines = emptyList(); backLines = emptyList()
-        val pad = (18 * resources.displayMetrics.density).toInt()
+        val pad = (10 * resources.displayMetrics.density).toInt()
         for (img in listOf(imgFront, imgBack)) {
-            img.setImageResource(R.drawable.ic_slot_sleeve)
+            img.setImageResource(R.drawable.img_turntable)
+            img.scaleType = ImageView.ScaleType.FIT_CENTER
             img.setPadding(pad, pad, pad, pad)
         }
         for (card in listOf(cardFront, cardBack)) {

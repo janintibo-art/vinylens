@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@color/paper" />
+    <!-- lumière douce venant du haut, comme une lampe au-dessus du bac à disques -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="radial"
+                android:centerX="0.5"
+                android:centerY="0.18"
+                android:gradientRadius="140%p"
+                android:startColor="@color/paper_lit"
+                android:endColor="@color/paper_shade" />
+        </shape>
+    </item>
     <item>
         <bitmap
             android:src="@drawable/paper_grain"

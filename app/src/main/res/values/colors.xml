@@ -12,4 +12,12 @@
     <color name="owned">#3E6F45</color>
     <color name="owned_wash">#DCE9DA</color>
     <color name="shadow_warm">#4A3418</color>
+    <color name="paper_lit">#FFFBF1</color>
+    <color name="paper_shade">#EADCC1</color>
+    <color name="slot_top">#F1E6D0</color>
+    <color name="slot_bottom">#E3D3B4</color>
+    <color name="edge_light">#66FFFFFF</color>
+    <color name="note_top">#FBEDCB</color>
+    <color name="note_bottom">#F3E1B6</color>
+    <color name="bar_shadow">#22785022</color>
 </resources>

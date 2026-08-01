@@ -27,6 +27,11 @@
         android:layout_height="1dp"
         android:background="@color/line" />
 
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="7dp"
+        android:background="@drawable/shadow_under_bar" />
+
     <!-- ===== Les deux prises de vue ===== -->
     <LinearLayout
         android:layout_width="match_parent"
@@ -42,8 +47,10 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             app:cardBackgroundColor="@color/paper_high"
+            android:outlineAmbientShadowColor="@color/shadow_warm"
+            android:outlineSpotShadowColor="@color/shadow_warm"
             app:cardCornerRadius="18dp"
-            app:cardElevation="3dp"
+            app:cardElevation="6dp"
             app:strokeColor="@color/line"
             app:strokeWidth="1dp">
 
@@ -63,9 +70,9 @@
                         android:layout_height="match_parent"
                         android:background="@drawable/bg_slot"
                         android:contentDescription="@string/slot_front"
-                        android:padding="18dp"
-                        android:scaleType="centerCrop"
-                        android:src="@drawable/ic_slot_sleeve" />
+                        android:padding="10dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/img_turntable" />
 
                     <TextView
                         android:id="@+id/badgeFront"
@@ -102,8 +109,10 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             app:cardBackgroundColor="@color/paper_high"
+            android:outlineAmbientShadowColor="@color/shadow_warm"
+            android:outlineSpotShadowColor="@color/shadow_warm"
             app:cardCornerRadius="18dp"
-            app:cardElevation="3dp"
+            app:cardElevation="6dp"
             app:strokeColor="@color/line"
             app:strokeWidth="1dp">
 
@@ -123,9 +132,9 @@
                         android:layout_height="match_parent"
                         android:background="@drawable/bg_slot"
                         android:contentDescription="@string/slot_back"
-                        android:padding="18dp"
-                        android:scaleType="centerCrop"
-                        android:src="@drawable/ic_slot_sleeve" />
+                        android:padding="10dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/img_turntable" />
 
                     <TextView
                         android:id="@+id/badgeBack"
@@ -167,6 +176,7 @@
             android:id="@+id/queryInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:fontFamily="@font/poppins"
             android:imeOptions="actionNext"
             android:inputType="text"
             android:textSize="15sp" />
@@ -228,13 +238,17 @@
             android:id="@+id/btnSearch"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="serif"
+            android:fontFamily="@font/lora_bold"
             android:letterSpacing="0.04"
+            android:outlineAmbientShadowColor="@color/shadow_warm"
+            android:outlineSpotShadowColor="@color/shadow_warm"
             android:text="@string/btn_search"
-            android:textStyle="bold"
             app:cornerRadius="22dp"
+            android:elevation="5dp"
             app:icon="@drawable/ic_disc"
-            app:iconTint="@color/ink" />
+            app:iconTint="@color/ink"
+            app:strokeColor="@color/gold_deep"
+            app:strokeWidth="1dp" />
     </LinearLayout>
 
     <TextView
@@ -249,6 +263,8 @@
         android:paddingTop="10dp"
         android:paddingEnd="12dp"
         android:paddingBottom="10dp"
+        android:fontFamily="@font/poppins"
+        android:lineSpacingExtra="2dp"
         android:text="@string/status_idle"
         android:textColor="@color/ink"
         android:textSize="13sp" />
@@ -285,11 +301,12 @@
             android:padding="24dp">
 
             <ImageView
-                android:layout_width="86dp"
-                android:layout_height="86dp"
-                android:alpha="0.35"
+                android:layout_width="180dp"
+                android:layout_height="wrap_content"
+                android:adjustViewBounds="true"
+                android:alpha="0.30"
                 android:contentDescription="@null"
-                android:src="@drawable/ic_disc" />
+                android:src="@drawable/img_turntable" />
 
             <TextView
                 style="@style/Text.VinyLens.Title"
@@ -304,6 +321,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
                 android:gravity="center"
+                android:fontFamily="@font/poppins"
                 android:text="@string/empty_body"
                 android:textColor="@color/ink_soft"
                 android:textSize="13sp" />
