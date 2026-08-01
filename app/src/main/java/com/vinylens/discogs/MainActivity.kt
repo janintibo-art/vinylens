@@ -33,6 +33,10 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
@@ -167,6 +171,7 @@ class MainActivity : AppCompatActivity() {
         imgBack.setOnClickListener { chooseSource(Side.BACK) }
 
         findViewById<View>(R.id.btnSearch).setOnClickListener { search() }
+        findViewById<View>(R.id.btnScan).setOnClickListener { scanBarcode() }
         findViewById<View>(R.id.btnWeb).setOnClickListener {
             val c = criteria()
             if (c.isEmpty()) toast("Rien à chercher.") else openUrl(DiscogsApi.webSearchUrl(c))
@@ -320,6 +325,10 @@ class MainActivity : AppCompatActivity() {
                 return@launch
             }
 
+            // Un vrai code-barres sur la photo vaut mieux que sa lecture en OCR
+            val scanned = detectBarcode(bmp)
+            if (scanned != null && catnoInput.text.isBlank()) catnoInput.setText(scanned)
+
             // Sur une étiquette, le texte tourne avec le disque : on relit dans les quatre sens.
             val angles = if (mode == Mode.DISC) listOf(0, 90, 180, 270) else listOf(0)
             val texts = ArrayList<Text>()
@@ -381,11 +390,11 @@ class MainActivity : AppCompatActivity() {
 
         when {
             barcode != null -> {
-                catnoInput.setText(barcode)
+                if (catnoInput.text.isBlank()) catnoInput.setText(barcode)
                 status.text = "Code-barres détecté : $barcode — c'est le critère le plus précis."
             }
             catnos.isNotEmpty() -> {
-                catnoInput.setText(catnos.first())
+                if (catnoInput.text.isBlank()) catnoInput.setText(catnos.first())
                 status.text = "N° probable : ${catnos.first()} (touche une étiquette pour en essayer un autre)."
             }
             else -> status.text = "Ni code-barres ni n° trouvé au verso. Recherche sur artiste + titre."
@@ -464,14 +473,60 @@ class MainActivity : AppCompatActivity() {
         else if (side == Side.BACK && catnoInput.text.isNotBlank()) search()
     }
 
+    // ---------- Code-barres ----------
+
+    /**
+     * Scanner en direct, fourni par les services Google Play : pas de permission caméra à
+     * demander, l'aperçu tourne dans leur processus. Le module se télécharge au premier usage.
+     */
+    private fun scanBarcode() {
+        val options = GmsBarcodeScannerOptions.Builder()
+            .setBarcodeFormats(
+                Barcode.FORMAT_EAN_13, Barcode.FORMAT_EAN_8,
+                Barcode.FORMAT_UPC_A, Barcode.FORMAT_UPC_E,
+                Barcode.FORMAT_CODE_128, Barcode.FORMAT_CODE_39
+            )
+            .enableAutoZoom()
+            .build()
+
+        status.text = "Vise le code-barres…"
+        GmsBarcodeScanning.getClient(this, options).startScan()
+            .addOnSuccessListener { code ->
+                val value = code.rawValue.orEmpty().trim()
+                if (value.isBlank()) {
+                    status.text = "Code illisible, réessaie."
+                    return@addOnSuccessListener
+                }
+                catnoInput.setText(value)
+                status.text = "Code-barres scanné : $value"
+                search()
+            }
+            .addOnCanceledListener { status.text = "Scan annulé." }
+            .addOnFailureListener { e ->
+                status.text = "Scanner indisponible (${e.message}). " +
+                        "Photographie le dos : le code sera lu sur l'image."
+            }
+    }
+
+    /** Lecture passive : chaque photo prise est aussi examinée à la recherche d'un code-barres. */
+    private suspend fun detectBarcode(bmp: Bitmap): String? = suspendCancellableCoroutine { cont ->
+        BarcodeScanning.getClient()
+            .process(InputImage.fromBitmap(bmp, 0))
+            .addOnSuccessListener { codes ->
+                val value = codes.firstNotNullOfOrNull { it.rawValue?.trim() }
+                if (cont.isActive) cont.resume(value?.takeIf { it.length >= 6 })
+            }
+            .addOnFailureListener { if (cont.isActive) cont.resume(null) }
+    }
+
     // ---------- Recherche ----------
 
     private fun criteria(): Criteria {
         val q = queryInput.text.toString().trim()
         val raw = catnoInput.text.toString().trim()
         val digits = raw.filter { it.isDigit() }
-        val isBarcode = raw.isNotBlank() && raw.none { it.isLetter() } &&
-                (digits.length == 12 || digits.length == 13)
+        // EAN-8, UPC-A, EAN-13 : tout ce qui est purement numérique et assez long
+        val isBarcode = raw.isNotBlank() && raw.none { it.isLetter() } && digits.length in 8..14
         return Criteria(
             q = q,
             catno = if (isBarcode) "" else raw,
@@ -766,6 +821,8 @@ class MainActivity : AppCompatActivity() {
                         "pratique pour ne pas cataloguer deux fois le même disque.\n\n" +
                         "Mode à la chaîne (menu ⋮) : après le recto, l'appareil photo repart tout seul " +
                         "sur le verso, et un nouveau disque démarre dès qu'un pressage est ajouté. " +
+                        "Le bouton à droite du champ n° ouvre un scanner de code-barres en direct ; " +
+                        "et de toute façon, chaque photo prise est aussi examinée pour y trouver un code.\n\n" +
                         "Reculer pendant la photo du verso lance la recherche sans lui.\n\n" +
                         "Disques sans code-barres : photographie l'étiquette centrale, ou même le " +
                         "dead wax (la zone lisse près du trou, à la lumière rasante). Le code gravé " +

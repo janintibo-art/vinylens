@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">VinyLens</string>
     <string name="hint_query">Artiste + titre</string>
+    <string name="scan_barcode">Scanner un code-barres</string>
     <string name="hint_catno">N° catalogue, matrice, code-barres</string>
     <string name="mode_sleeve">Pochette</string>
     <string name="mode_disc">Étiquettes du disque</string>

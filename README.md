@@ -183,3 +183,17 @@ retrouve toujours à l'envers. Le décodage passe par `BitmapFactory` + `ExifInt
 sous-échantillonnage à 2200 px pour tenir en mémoire.
 
 Le choix du mode est mémorisé entre deux lancements.
+
+## Code-barres (v2.6)
+
+Deux chemins, complémentaires :
+
+- **Scanner en direct** — le bouton à droite du champ n° ouvre le scanner des services Google Play
+  (`play-services-code-scanner`). Aucune permission caméra à demander : l'aperçu tourne dans le
+  processus de Play Services. Formats : EAN-13/8, UPC-A/E, Code 128, Code 39, avec zoom automatique.
+  Le module se télécharge au premier usage (connexion requise une fois).
+- **Lecture passive** — chaque photo prise est aussi examinée par ML Kit `barcode-scanning`
+  (modèle embarqué, hors-ligne). Un code lu par ce biais est plus fiable que sa transcription
+  en OCR, et il ne remplace jamais une valeur déjà présente dans le champ.
+
+Le critère `barcode` de la recherche accepte désormais 8 à 14 chiffres, pour couvrir EAN-8 et UPC-A.

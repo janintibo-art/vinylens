@@ -291,6 +291,14 @@
             android:textColor="@color/ink"
             android:textColorHint="@color/ink_soft"
             android:textSize="15sp" />
+
+        <ImageButton
+            android:id="@+id/btnScan"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_circle_gold"
+            android:contentDescription="@string/scan_barcode"
+            android:src="@drawable/ic_scan" />
     </LinearLayout>
 
     <HorizontalScrollView
