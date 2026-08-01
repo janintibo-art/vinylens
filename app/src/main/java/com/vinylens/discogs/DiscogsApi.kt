@@ -40,6 +40,28 @@ object DiscogsApi {
     private const val UA = "VinyLens/1.0 (+https://github.com/vinylens)"
     private const val BASE = "https://api.discogs.com"
 
+    /**
+     * Discogs autorise 60 requêtes/minute par jeton. On se cale à 50 pour garder
+     * de la marge, et on patiente si la fenêtre est pleine plutôt que de se faire jeter.
+     */
+    private const val MAX_PER_MINUTE = 50
+    private val callTimes = ArrayDeque<Long>()
+
+    private fun throttle() {
+        synchronized(callTimes) {
+            while (true) {
+                val now = System.currentTimeMillis()
+                while (callTimes.isNotEmpty() && now - callTimes.first() > 60_000) callTimes.removeFirst()
+                if (callTimes.size < MAX_PER_MINUTE) {
+                    callTimes.addLast(now)
+                    return
+                }
+                val wait = 60_000 - (now - callTimes.first()) + 50
+                try { Thread.sleep(wait.coerceIn(50, 60_000)) } catch (e: InterruptedException) { return }
+            }
+        }
+    }
+
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(25, TimeUnit.SECONDS)
@@ -63,9 +85,16 @@ object DiscogsApi {
     }
 
     @Throws(IOException::class)
-    private fun call(request: Request, action: String): String {
+    private fun call(request: Request, action: String, retryOn429: Boolean = true): String {
+        throttle()
         client.newCall(request).execute().use { resp ->
             val body = resp.body?.string().orEmpty()
+            if (resp.code == 429 && retryOn429) {
+                // Discogs indique parfois combien de temps patienter
+                val wait = (resp.header("Retry-After")?.toLongOrNull() ?: 5L).coerceIn(1, 60) * 1000
+                try { Thread.sleep(wait) } catch (e: InterruptedException) { }
+                return call(request, action, retryOn429 = false)
+            }
             if (!resp.isSuccessful) throw IOException(message(resp.code, action))
             return body
         }

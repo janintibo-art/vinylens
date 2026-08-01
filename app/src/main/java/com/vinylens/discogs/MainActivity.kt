@@ -74,6 +74,9 @@ class MainActivity : AppCompatActivity() {
     private var pendingUri: Uri? = null
     private var frontDone = false
     private var backDone = false
+    private var lastFromCamera = false
+    private var sessionAdded = 0
+    private val checkedNotOwned = HashSet<Int>()
     private var frontLines: List<String> = emptyList()
     private var backLines: List<String> = emptyList()
 
@@ -81,11 +84,20 @@ class MainActivity : AppCompatActivity() {
     private val username: String get() = prefs.getString("username", "").orEmpty()
     private val folderId: Int get() = prefs.getInt("folder_id", 1)
     private val folderName: String get() = prefs.getString("folder_name", "Uncategorized").orEmpty()
+    private val chainMode: Boolean get() = prefs.getBoolean("chain", true)
 
     private val takePicture =
         registerForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
             val uri = pendingUri
-            if (ok && uri != null) onImage(pendingSide, uri) else status.text = "Photo annulée."
+            when {
+                ok && uri != null -> onImage(pendingSide, uri)
+                // en mode à la chaîne, reculer sur le verso = « ce disque n'en a pas besoin »
+                pendingSide == Side.BACK && frontDone -> {
+                    status.text = "Verso passé, recherche sur artiste + titre."
+                    search()
+                }
+                else -> status.text = "Photo annulée."
+            }
         }
 
     private val pickImage =
@@ -147,7 +159,22 @@ class MainActivity : AppCompatActivity() {
         return true
     }
 
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        menu.findItem(R.id.action_chain)?.isChecked = chainMode
+        return super.onPrepareOptionsMenu(menu)
+    }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
+        R.id.action_chain -> {
+            val on = !chainMode
+            prefs.edit().putBoolean("chain", on).apply()
+            item.isChecked = on
+            status.text = if (on)
+                "Mode à la chaîne activé : le verso s'enchaîne, et un nouveau disque démarre après chaque ajout."
+            else
+                "Mode à la chaîne désactivé : chaque photo se déclenche à la main."
+            true
+        }
         R.id.action_account -> { accountDialog(); true }
         R.id.action_folder -> { chooseFolder(); true }
         R.id.action_help -> { showHelp(); true }
@@ -163,7 +190,8 @@ class MainActivity : AppCompatActivity() {
         MaterialAlertDialogBuilder(this)
             .setTitle(titre)
             .setItems(arrayOf("Appareil photo", "Galerie")) { _, which ->
-                if (which == 0) shootPhoto() else pickImage.launch("image/*")
+                lastFromCamera = which == 0
+            if (which == 0) shootPhoto() else pickImage.launch("image/*")
             }
             .show()
     }
@@ -236,6 +264,12 @@ class MainActivity : AppCompatActivity() {
             "Aucun texte lisible au recto. Photographie maintenant le verso."
         else
             "Recto lu. Photographie le verso pour le n° de catalogue."
+
+        // mode à la chaîne : on enchaîne directement sur le verso
+        if (chainMode && lastFromCamera && !backDone) {
+            pendingSide = Side.BACK
+            imgFront.postDelayed({ shootPhoto() }, 350)
+        }
     }
 
     private fun handleBack(text: com.google.mlkit.vision.text.Text) {
@@ -357,8 +391,9 @@ class MainActivity : AppCompatActivity() {
     private fun checkOwnership(results: List<Release>) {
         if (username.isBlank() || token.isBlank()) return
         lifecycleScope.launch {
-            for (r in results.take(10)) {
-                if (owned.contains(r.id)) continue
+            // 5 vérifications au maximum, et jamais deux fois le même pressage
+            for (r in results.take(5)) {
+                if (owned.contains(r.id) || checkedNotOwned.contains(r.id)) continue
                 val n = withContext(Dispatchers.IO) {
                     try { DiscogsApi.copiesInCollection(username, r.id, token) } catch (e: Exception) { 0 }
                 }
@@ -366,8 +401,11 @@ class MainActivity : AppCompatActivity() {
                     owned.add(r.id)
                     saveOwned()
                     adapter.refreshItem(r.id)
+                } else {
+                    if (checkedNotOwned.size > 4000) checkedNotOwned.clear()
+                    checkedNotOwned.add(r.id)
                 }
-                delay(250) // on reste loin de la limite Discogs (60 requêtes/min)
+                delay(120) // le limiteur de DiscogsApi fait le vrai travail
             }
         }
     }
@@ -410,8 +448,17 @@ class MainActivity : AppCompatActivity() {
                 owned.add(release.id)
                 saveOwned()
                 adapter.refreshItem(release.id)
-                status.text = "Ajouté à « $folderName » : ${release.title}"
-                toast("Ajouté à ta collection Discogs")
+                sessionAdded++
+                toast("Ajouté · $sessionAdded cette session")
+                if (chainMode) {
+                    reset()
+                    status.text = "$sessionAdded ajoutés. Disque suivant : photographie le recto."
+                    pendingSide = Side.FRONT
+                    lastFromCamera = true
+                    imgFront.postDelayed({ shootPhoto() }, 400)
+                } else {
+                    status.text = "Ajouté à « $folderName » ($sessionAdded cette session) : ${release.title}"
+                }
             } catch (e: Exception) {
                 progress.visibility = View.GONE
                 status.text = e.message ?: "Ajout impossible."
@@ -561,7 +608,10 @@ class MainActivity : AppCompatActivity() {
                         "5. Touche un résultat pour ouvrir sa fiche, ou le bouton + pour l'ajouter " +
                         "à ta collection ou à ta wantlist.\n\n" +
                         "Une coche verte signale un pressage déjà présent dans ta collection — " +
-                        "pratique pour ne pas cataloguer deux fois le même disque."
+                        "pratique pour ne pas cataloguer deux fois le même disque.\n\n" +
+                        "Mode à la chaîne (menu ⋮) : après le recto, l'appareil photo repart tout seul " +
+                        "sur le verso, et un nouveau disque démarre dès qu'un pressage est ajouté. " +
+                        "Reculer pendant la photo du verso lance la recherche sans lui."
             )
             .setPositiveButton("OK", null)
             .show()

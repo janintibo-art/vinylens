@@ -135,3 +135,18 @@ L'APK est signé avec la clé *debug* : parfait pour un usage perso, pas publiab
   est lue.
 - Typographie : titres et libellés en serif (Noto Serif système), n° de catalogue en monospace.
 - État vide illustré, pastilles numérotées 1 / 2 sur les vignettes, encart doré pour les messages.
+
+## Catalogage en série (v2.3)
+
+- **Mode à la chaîne** (menu ⋮, actif par défaut) : après le recto, l'appareil photo repart seul
+  sur le verso ; après chaque ajout à la collection, un nouveau disque démarre.
+  Reculer pendant la photo du verso lance la recherche sans lui.
+- **Limiteur de débit** dans `DiscogsApi` : 50 requêtes/minute maximum (la limite Discogs est de 60),
+  file d'attente automatique plutôt qu'une erreur, et relance en respectant l'en-tête `Retry-After`
+  en cas de 429.
+- **Vérification de collection** réduite aux 5 premiers résultats, avec cache des pressages
+  déjà vérifiés pour ne jamais interroger deux fois le même.
+- **N° de catalogue** : trois familles de formats reconnues — anglo-saxon (`SHVL 804`, `PCS 7027`),
+  Pathé/EMI (`2C 062-11.653`) et Philips/Polydor/Barclay/Vogue (`6325 022`, `80 502`, `30.123`),
+  avec un score de vraisemblance et rejet des années isolées.
+- Compteur de disques ajoutés affiché pendant la session.

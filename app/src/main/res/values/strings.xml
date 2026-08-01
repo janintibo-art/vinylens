@@ -14,6 +14,7 @@
     <string name="menu_account">Compte Discogs</string>
     <string name="menu_folder">Dossier de collection</string>
     <string name="menu_help">Aide</string>
+    <string name="menu_chain">Mode à la chaîne</string>
     <string name="menu_reset">Nouvelle recherche</string>
     <string name="add_to_collection">Ajouter à ma collection</string>
     <string name="in_collection">Déjà dans ma collection</string>

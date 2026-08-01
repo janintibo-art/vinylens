@@ -23,12 +23,22 @@ object OcrQuery {
     // 12 ou 13 chiffres, éventuellement séparés par des espaces ou tirets (EAN / UPC)
     private val BARCODE_RE = Regex("(?<!\\d)(?:\\d[ \\-]?){11,12}\\d(?!\\d)")
 
-    // Ex. SHVL 804 / PCS 7027 / LP-9001 / 88985 44950 1 / CDP 7 46001 2
-    private val CATNO_RE = Regex("\\b[A-Z]{1,6}[ \\-]?\\d{2,6}(?:[ \\-][A-Z0-9]{1,4})?\\b")
+    /**
+     * Les n° de catalogue n'ont pas de format unique. Trois familles couvrent l'essentiel :
+     *  - anglo-saxon  : SHVL 804, PCS 7027, LP-9001, CLVLX 240
+     *  - Pathé / EMI  : 2C 062-11.653, 2C 068 82.456
+     *  - Philips, Polydor, Barclay, Vogue : 6325 022, 2473 105, 80 502, 30.123
+     */
+    private val CATNO_PATTERNS = listOf(
+        // au moins une lettre, puis des chiffres, avec suffixe éventuel
+        Regex("(?<![A-Z0-9])[A-Z0-9]{0,3}[A-Z][A-Z0-9]{0,4}[ .\\-]?\\d{2,6}(?:[ .\\-]\\d{2,6})?(?:[ .\\-][A-Z0-9]{1,4})?(?![A-Z0-9])"),
+        // tout en chiffres, mais groupés : 6325 022, 80 502, 30.123
+        Regex("(?<!\\d)\\d{2,4}[ .]\\d{2,4}(?:[ .]\\d{1,3})?(?!\\d)")
+    )
 
     private val CATNO_BLACKLIST = listOf(
-        "RPM", "LP", "EP", "CD", "AAD", "DDD", "ADD", "STEREO", "MONO", "SIDE", "FACE",
-        "VOL", "NO", "TRACK", "MIN", "SEC", "BPM"
+        "RPM", "STEREO", "MONO", "SIDE", "FACE", "VOL", "TRACK", "MIN", "SEC",
+        "BPM", "AAD", "DDD", "ADD", "TEL", "REF", "COPYRIGHT"
     )
 
     private fun clean(raw: String): String =
@@ -72,24 +82,33 @@ object OcrQuery {
     }
 
     /** N° de catalogue probables, le plus vraisemblable en premier. */
-    fun extractCatalogNumbers(text: Text, max: Int = 5): List<String> {
+    fun extractCatalogNumbers(text: Text, max: Int = 6): List<String> {
+        val raw = text.text.uppercase()
         val found = LinkedHashMap<String, Int>()
-        for (m in CATNO_RE.findAll(text.text.uppercase())) {
-            val raw = m.value.trim()
-            val letters = raw.takeWhile { it.isLetter() }
-            if (letters.isEmpty()) continue
-            if (CATNO_BLACKLIST.any { letters == it }) continue
-            val digits = raw.count { it.isDigit() }
-            if (digits < 2) continue
-            // Un pressage a rarement un n° de plus de 14 caractères
-            if (raw.length > 14) continue
 
-            var score = 0
-            if (letters.length in 2..5) score += 3
-            if (raw.contains(' ') || raw.contains('-')) score += 2
-            if (digits in 3..6) score += 2
-            if (raw.length in 5..12) score += 1
-            found[raw] = maxOf(found[raw] ?: 0, score)
+        for ((familyIndex, re) in CATNO_PATTERNS.withIndex()) {
+            for (m in re.findAll(raw)) {
+                val cand = m.value.trim().trim('.', '-')
+                if (cand.length !in 4..16) continue
+
+                val digits = cand.count { it.isDigit() }
+                val letters = cand.takeWhile { it.isLetter() || it.isDigit() }.filter { it.isLetter() }
+                if (digits < 2) continue
+                if (CATNO_BLACKLIST.any { cand.startsWith(it) && cand.length <= it.length + 4 }) continue
+
+                // une année seule n'est pas un n° de catalogue
+                if (cand.none { it.isLetter() } && cand.none { it == ' ' || it == '.' }) continue
+                if (cand.matches(Regex("^(19|20)\\d{2}$"))) continue
+
+                var score = if (familyIndex == 0) 4 else 2
+                if (letters.length in 2..5) score += 3
+                if (cand.contains(' ') || cand.contains('-') || cand.contains('.')) score += 2
+                if (digits in 3..7) score += 2
+                if (cand.length in 5..12) score += 1
+                if (cand.first().isDigit() && letters.isEmpty()) score -= 1
+
+                found[cand] = maxOf(found[cand] ?: 0, score)
+            }
         }
         return found.entries.sortedByDescending { it.value }.take(max).map { it.key }
     }
