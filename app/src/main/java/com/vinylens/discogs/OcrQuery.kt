@@ -28,10 +28,13 @@ object OcrQuery {
      *  - anglo-saxon  : SHVL 804, PCS 7027, LP-9001, CLVLX 240
      *  - Pathé / EMI  : 2C 062-11.653, 2C 068 82.456
      *  - Philips, Polydor, Barclay, Vogue : 6325 022, 2473 105, 80 502, 30.123
+     *
+     * Les micro-labels (SR-04, TG001, AMREP049) tombent dans la première famille :
+     * lettres collées aux chiffres, séparateur facultatif.
      */
     private val CATNO_PATTERNS = listOf(
         // au moins une lettre, puis des chiffres, avec suffixe éventuel
-        Regex("(?<![A-Z0-9])[A-Z0-9]{0,3}[A-Z][A-Z0-9]{0,4}[ .\\-]?\\d{2,6}(?:[ .\\-]\\d{2,6})?(?:[ .\\-][A-Z0-9]{1,4})?(?![A-Z0-9])"),
+        Regex("(?<![A-Z0-9])[A-Z0-9]{0,3}[A-Z][A-Z0-9]{0,4}[ .\\-]?\\d{1,6}(?:[ .\\-]\\d{2,6})?(?:[ .\\-][A-Z0-9]{1,4})?(?![A-Z0-9])"),
         // tout en chiffres, mais groupés : 6325 022, 80 502, 30.123
         Regex("(?<!\\d)\\d{2,4}[ .]\\d{2,4}(?:[ .]\\d{1,3})?(?!\\d)")
     )
@@ -89,11 +92,13 @@ object OcrQuery {
         for ((familyIndex, re) in CATNO_PATTERNS.withIndex()) {
             for (m in re.findAll(raw)) {
                 val cand = m.value.trim().trim('.', '-')
-                if (cand.length !in 4..16) continue
+                // les petits labels font court : SR-04, TG001, AMREP049, PBR12
+                if (cand.length !in 3..18) continue
 
                 val digits = cand.count { it.isDigit() }
                 val letters = cand.takeWhile { it.isLetter() || it.isDigit() }.filter { it.isLetter() }
-                if (digits < 2) continue
+                if (digits < 1) continue
+                if (digits < 2 && letters.length < 2) continue
                 if (CATNO_BLACKLIST.any { cand.startsWith(it) && cand.length <= it.length + 4 }) continue
 
                 // une année seule n'est pas un n° de catalogue
@@ -104,6 +109,7 @@ object OcrQuery {
                 if (letters.length in 2..5) score += 3
                 if (cand.contains(' ') || cand.contains('-') || cand.contains('.')) score += 2
                 if (digits in 3..7) score += 2
+                if (digits == 1) score -= 2
                 if (cand.length in 5..12) score += 1
                 if (cand.first().isDigit() && letters.isEmpty()) score -= 1
 

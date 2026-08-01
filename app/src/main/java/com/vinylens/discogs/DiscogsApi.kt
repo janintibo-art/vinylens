@@ -26,6 +26,7 @@ data class Criteria(
     val vinylOnly: Boolean = true
 ) {
     fun label(): String = when {
+        barcode.any { it.isLetter() } -> "identifiant $barcode"
         barcode.isNotBlank() -> "code-barres $barcode"
         catno.isNotBlank() && q.isNotBlank() -> "n° $catno + « $q »"
         catno.isNotBlank() -> "n° de catalogue $catno"

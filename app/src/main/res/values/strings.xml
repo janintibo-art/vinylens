@@ -1,7 +1,12 @@
 <resources>
     <string name="app_name">VinyLens</string>
     <string name="hint_query">Artiste + titre</string>
-    <string name="hint_catno">N° de catalogue ou code-barres</string>
+    <string name="hint_catno">N° catalogue, matrice, code-barres</string>
+    <string name="mode_sleeve">Pochette</string>
+    <string name="mode_disc">Étiquettes du disque</string>
+    <string name="slot_a">Face A</string>
+    <string name="slot_b">Face B</string>
+    <string name="slot_label_sub">ÉTIQUETTE</string>
     <string name="slot_front">Recto</string>
     <string name="slot_front_sub">POCHETTE</string>
     <string name="slot_back">Verso</string>

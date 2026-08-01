@@ -150,3 +150,36 @@ L'APK est signé avec la clé *debug* : parfait pour un usage perso, pas publiab
   Pathé/EMI (`2C 062-11.653`) et Philips/Polydor/Barclay/Vogue (`6325 022`, `80 502`, `30.123`),
   avec un score de vraisemblance et rejet des années isolées.
 - Compteur de disques ajoutés affiché pendant la session.
+
+## Pressages sans code-barres (petits labels)
+
+Les familles de formats servent à **classer les candidats**, pas à filtrer : tout le texte lu
+au verso reste proposé en étiquettes, et le champ est libre.
+
+Pour les pressages underground, la cascade tente en plus :
+
+1. le contenu du champ n° envoyé au paramètre `barcode` de l'API, qui interroge **tous les
+   identifiants** d'un pressage : matrice / runout gravé dans le dead wax, Label Code, « Other » ;
+2. artiste + titre sans le filtre vinyle ;
+3. la ligne la plus visible du recto seule — en général le nom du groupe.
+
+Formats courts reconnus : `SR-04`, `TG5`, `TG001`, `AMREP049`, `PBR12`, `DISCHORD 14`, `SST 016`.
+
+## Mode « Étiquettes du disque » (v2.5)
+
+Beaucoup de maxis techno n'ont pas de pochette imprimée : white label, pochette noire ou blanche
+générique. Toute l'information est alors sur l'**étiquette centrale** et dans le **dead wax**.
+
+Un sélecteur en haut de l'écran bascule entre :
+
+| Mode | Vignette 1 | Vignette 2 | Traitement |
+|---|---|---|---|
+| **Pochette** | Recto | Verso | recto = artiste/titre, verso = n° et code-barres |
+| **Étiquettes du disque** | Face A | Face B | les deux faces sont fouillées pour l'artiste **et** le n° |
+
+En mode disque, chaque photo est relue par ML Kit sous **quatre orientations** (0°, 90°, 180°, 270°)
+et les résultats fusionnés : sur une étiquette, le texte est disposé en cercle et une partie se
+retrouve toujours à l'envers. Le décodage passe par `BitmapFactory` + `ExifInterface`, avec
+sous-échantillonnage à 2200 px pour tenir en mémoire.
+
+Le choix du mode est mémorisé entre deux lancements.

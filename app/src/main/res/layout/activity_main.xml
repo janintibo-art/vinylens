@@ -23,6 +23,36 @@
             android:src="@drawable/logo_vinylens" />
     </com.google.android.material.appbar.MaterialToolbar>
 
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/modeGroup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="12dp"
+        app:selectionRequired="true"
+        app:singleSelection="true">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/modeSleeve"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="42dp"
+            android:fontFamily="@font/poppins_medium"
+            android:text="@string/mode_sleeve"
+            android:textSize="12sp"
+            app:strokeColor="@color/gold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/modeDisc"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="42dp"
+            android:fontFamily="@font/poppins_medium"
+            android:text="@string/mode_disc"
+            android:textSize="12sp"
+            app:strokeColor="@color/gold" />
+    </com.google.android.material.button.MaterialButtonToggleGroup>
+
     <!-- ===== Les deux prises de vue ===== -->
     <LinearLayout
         android:layout_width="match_parent"
@@ -79,6 +109,7 @@
                 </FrameLayout>
 
                 <TextView
+                    android:id="@+id/titleFront"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/poppins_bold"
@@ -160,6 +191,7 @@
                 </FrameLayout>
 
                 <TextView
+                    android:id="@+id/titleBack"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/poppins_bold"
