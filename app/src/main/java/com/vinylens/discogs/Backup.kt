@@ -55,7 +55,7 @@ object Backup {
      * Restauration fusionnante : les fiches déjà présentes (même identifiant) sont conservées,
      * on n'écrase donc jamais un travail en cours par une archive plus ancienne.
      */
-    fun import(c: Context, uri: Uri): Result = try {
+    fun restore(c: Context, uri: Uri): Result = try {
         val tmp = File(c.cacheDir, "restore").apply { deleteRecursively(); mkdirs() }
         var photos = 0
 

@@ -306,13 +306,14 @@ class DiscAdapter(
 
         val hit = d.matchingTrack(query)
         holder.trackHit.visibility = if (hit == null) View.GONE else View.VISIBLE
-        holder.trackHit.text = hit?.let { "♪ $it" }
+        holder.trackHit.text = if (hit == null) "" else "♪ $hit"
 
+        // ContextCompat.getColorStateList est nullable : on passe par la surcharge entière
         val picked = d.id in selection
-        holder.card.strokeWidth = if (picked) 3 * holder.itemView.resources.displayMetrics.density.toInt() else
-            holder.itemView.resources.displayMetrics.density.toInt()
+        val density = holder.itemView.resources.displayMetrics.density.toInt().coerceAtLeast(1)
+        holder.card.strokeWidth = if (picked) 3 * density else density
         holder.card.setStrokeColor(
-            androidx.core.content.ContextCompat.getColorStateList(
+            androidx.core.content.ContextCompat.getColor(
                 holder.itemView.context,
                 if (picked) R.color.gold else R.color.line
             )

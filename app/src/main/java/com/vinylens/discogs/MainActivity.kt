@@ -1372,7 +1372,7 @@ class MainActivity : AppCompatActivity() {
         progress.visibility = View.VISIBLE
         status.text = "Restauration…"
         lifecycleScope.launch {
-            val r = withContext(Dispatchers.IO) { Backup.import(this@MainActivity, uri) }
+            val r = withContext(Dispatchers.IO) { Backup.restore(this@MainActivity, uri) }
             progress.visibility = View.GONE
             status.text = if (r.error != null) "Échec : ${r.error}"
             else "Restauré : ${r.discs} disques, ${r.items} fiches en pile, ${r.photos} images."
