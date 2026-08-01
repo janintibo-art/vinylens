@@ -223,3 +223,30 @@ Détails d'implémentation :
 
 **Création de pressage** : l'API Discogs n'expose aucun endpoint de soumission. Les fiches sont donc
 préparées en local et le formulaire du site (`/release/add`) s'ouvre depuis la pile.
+
+## Bibliothèque locale (v3.1)
+
+L'app tient désormais son propre catalogue, indépendant de Discogs.
+
+**Ajout** — sur un résultat, le menu propose « Discogs + ma bibliothèque », « Ma bibliothèque
+seulement » ou « Discogs seulement ». Une fiche locale conserve :
+
+- les photos prises pendant la recherche (recopiées, pas de simple référence au cache)
+- la pochette téléchargée une fois, donc consultable hors ligne
+- le lien Discogs, le n° de catalogue, le label, l'année, le pays, le format
+- les **genres et styles** renvoyés par Discogs (`genre` + `style` du résultat de recherche)
+- la **caisse de rangement** et des **notes personnelles**
+
+La caisse courante (menu ⋮) est proposée par défaut à chaque ajout : on remplit une caisse,
+on la change une fois, et la série suivante suit.
+
+**Écran bibliothèque** — recherche plein texte (artiste, titre, label, caisse, notes, genre),
+tri A→Z artiste / A→Z titre / récents, et filtres par caisse et par genre. Le tri alphabétique
+ignore la casse et les articles initiaux (« The », « Le », « Les »).
+
+**Fiche du disque** — pochette, identité, genres, rangement, notes, et une galerie de photos
+libre : appui long sur une vignette pour la supprimer. Boutons ouvrir sur Discogs, partager
+(texte + photos) et supprimer.
+
+Stockage : `filesDir/vinylens_library.json` pour les fiches, `filesDir/library/` pour les images.
+Rien ne part sur un serveur.

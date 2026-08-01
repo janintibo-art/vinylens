@@ -6,6 +6,8 @@
         android:checkable="true"
         android:title="@string/menu_chain"
         app:showAsAction="never" />
+    <item android:id="@+id/action_library" android:title="@string/menu_library" app:showAsAction="never" />
+    <item android:id="@+id/action_box" android:title="@string/menu_box" app:showAsAction="never" />
     <item android:id="@+id/action_sidelined" android:title="@string/menu_sidelined" app:showAsAction="never" />
     <item android:id="@+id/action_drafts" android:title="@string/menu_drafts" app:showAsAction="never" />
     <item android:id="@+id/action_journal" android:title="@string/menu_journal" app:showAsAction="never" />

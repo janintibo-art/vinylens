@@ -218,6 +218,8 @@ class MainActivity : AppCompatActivity() {
                 "Mode à la chaîne désactivé : chaque photo se déclenche à la main."
             true
         }
+        R.id.action_library -> { startActivity(Intent(this, LibraryActivity::class.java)); true }
+        R.id.action_box -> { boxDialog(); true }
         R.id.action_sidelined -> { pileDialog(Store.REVIEW); true }
         R.id.action_drafts -> { pileDialog(Store.CREATE); true }
         R.id.action_journal -> { journalDialog(); true }
@@ -672,10 +674,13 @@ class MainActivity : AppCompatActivity() {
         if (username.isBlank()) { verifyAccount(token, silent = false); return }
 
         val already = owned.contains(release.id)
+        val inLibrary = Library.hasRelease(this, release.id)
         val options = arrayOf(
-            if (already) "Ajouter un 2e exemplaire à « $folderName »" else "Ajouter à ma collection (« $folderName »)",
+            "Discogs + ma bibliothèque",
+            if (inLibrary) "Ma bibliothèque (2e exemplaire)" else "Ma bibliothèque seulement",
+            if (already) "Discogs seulement (2e exemplaire)" else "Discogs seulement",
             "Ajouter à ma wantlist",
-            "Changer de dossier",
+            "Changer de dossier Discogs",
             "Ouvrir la fiche Discogs"
         )
 
@@ -683,13 +688,108 @@ class MainActivity : AppCompatActivity() {
             .setTitle(release.title)
             .setItems(options) { _, which ->
                 when (which) {
-                    0 -> addToCollection(release)
-                    1 -> addToWantlist(release)
-                    2 -> chooseFolder()
-                    3 -> openUrl(release.url)
+                    0 -> libraryDialog(release, alsoDiscogs = true)
+                    1 -> libraryDialog(release, alsoDiscogs = false)
+                    2 -> addToCollection(release)
+                    3 -> addToWantlist(release)
+                    4 -> chooseFolder()
+                    5 -> openUrl(release.url)
                 }
             }
             .show()
+    }
+
+    // ---------- Bibliothèque locale ----------
+
+    private val currentBox: String get() = prefs.getString("box", "").orEmpty()
+
+    private fun boxDialog() {
+        val input = EditText(this)
+        input.setText(currentBox)
+        input.hint = getString(R.string.disc_box_hint)
+        val pad = (16 * resources.displayMetrics.density).toInt()
+        input.setPadding(pad, pad, pad, pad)
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Caisse courante")
+            .setMessage("Elle sera proposée par défaut à chaque ajout dans ta bibliothèque.")
+            .setView(input)
+            .setPositiveButton("Enregistrer") { _, _ ->
+                prefs.edit().putString("box", input.text.toString().trim()).apply()
+                status.text = "Caisse courante : ${input.text.toString().trim().ifBlank { "aucune" }}"
+            }
+            .setNegativeButton("Annuler", null)
+            .show()
+    }
+
+    /** Une fiche locale garde les photos de la recherche, le lien Discogs, la caisse et les notes. */
+    private fun libraryDialog(release: Release, alsoDiscogs: Boolean) {
+        val box = EditText(this)
+        box.setText(currentBox)
+        box.hint = getString(R.string.disc_box_hint)
+        val notes = EditText(this)
+        notes.hint = getString(R.string.disc_notes_hint)
+
+        val pad = (16 * resources.displayMetrics.density).toInt()
+        val wrap = android.widget.LinearLayout(this)
+        wrap.orientation = android.widget.LinearLayout.VERTICAL
+        wrap.setPadding(pad + pad / 2, pad / 2, pad + pad / 2, 0)
+        wrap.addView(box)
+        wrap.addView(notes)
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Ajouter à ma bibliothèque")
+            .setView(wrap)
+            .setPositiveButton("Ajouter") { _, _ ->
+                val boxName = box.text.toString().trim()
+                prefs.edit().putString("box", boxName).apply()
+                saveToLibrary(release, boxName, notes.text.toString().trim())
+                if (alsoDiscogs) addToCollection(release) else afterAdded()
+            }
+            .setNegativeButton("Annuler", null)
+            .show()
+    }
+
+    private fun saveToLibrary(release: Release, box: String, notes: String) {
+        val parts = release.artistTitle.split(" - ", limit = 2)
+        val disc = Disc(
+            artist = parts.getOrNull(0)?.trim().orEmpty(),
+            title = parts.getOrNull(1)?.trim().orEmpty().ifBlank { release.title },
+            catno = release.catno, label = release.label, year = release.year,
+            country = release.country, format = release.format, genres = release.genres,
+            releaseId = release.id, discogsUrl = release.url, coverUrl = release.thumb,
+            box = box, notes = notes, inDiscogs = true
+        )
+        Library.add(this, disc)
+
+        // photos de la recherche + pochette, copiées pour rester consultables hors ligne
+        lifecycleScope.launch {
+            val photos = withContext(Dispatchers.IO) {
+                listOfNotNull(frontUri, backUri).mapNotNull { uri ->
+                    Library.copyPhoto(this@MainActivity, uri, disc.id).ifBlank { null }
+                }
+            }
+            val cover = withContext(Dispatchers.IO) {
+                Library.downloadCover(this@MainActivity, release.thumb, disc.id)
+            }
+            Library.update(this@MainActivity, disc.copy(photos = photos, coverPath = cover))
+        }
+    }
+
+    /** Fin de cycle commune : compteur, remise à zéro, disque suivant. */
+    private fun afterAdded() {
+        val total = Library.count(this)
+        sessionAdded++
+        toast("Ajouté · $sessionAdded cette session")
+        if (chainMode) {
+            reset()
+            status.text = "$total disques en bibliothèque. Suivant : photographie le recto."
+            pendingSide = Side.FRONT
+            lastFromCamera = true
+            imgFront.postDelayed({ shootPhoto() }, 400)
+        } else {
+            status.text = "Ajouté à ta bibliothèque ($total disques)."
+        }
     }
 
     private fun addToCollection(release: Release) {
@@ -710,17 +810,7 @@ class MainActivity : AppCompatActivity() {
                 owned.add(release.id)
                 saveOwned()
                 adapter.refreshItem(release.id)
-                sessionAdded++
-                toast("Ajouté · $sessionAdded cette session")
-                if (chainMode) {
-                    reset()
-                    status.text = "$sessionAdded ajoutés. Disque suivant : photographie le recto."
-                    pendingSide = Side.FRONT
-                    lastFromCamera = true
-                    imgFront.postDelayed({ shootPhoto() }, 400)
-                } else {
-                    status.text = "Ajouté à « $folderName » ($sessionAdded cette session) : ${release.title}"
-                }
+                afterAdded()
             } catch (e: Exception) {
                 progress.visibility = View.GONE
                 if (isNetworkError(e)) {
@@ -1261,6 +1351,10 @@ class MainActivity : AppCompatActivity() {
                         "précis (code-barres) au plus large (artiste + titre).\n" +
                         "5. Touche un résultat pour ouvrir sa fiche, ou le bouton + pour l'ajouter " +
                         "à ta collection ou à ta wantlist.\n\n" +
+                        "Ma bibliothèque (menu ⋮) est ton catalogue local : chaque disque y garde ses photos, " +
+                        "son lien Discogs, sa caisse de rangement et tes notes. Recherche par texte, " +
+                        "tri A→Z ou par ajout, filtres par genre et par caisse. La fiche accepte " +
+                        "autant de photos que tu veux.\n\n" +
                         "Deux boutons sous le message : « Mettre de côté » garde le disque et ses photos " +
                         "pour plus tard, « Pas sur Discogs » prépare une fiche à soumettre. " +
                         "Les deux piles s'exportent en CSV avec les photos depuis le menu ⋮.\n\n" +

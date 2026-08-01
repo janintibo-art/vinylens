@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="disc_count">
+        <item quantity="one">%d disque</item>
+        <item quantity="other">%d disques</item>
+    </plurals>
+</resources>

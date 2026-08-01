@@ -15,7 +15,13 @@ data class Release(
     val thumb: String,
     val url: String,
     val catno: String = "",
-    val exactMatch: Boolean = false
+    val exactMatch: Boolean = false,
+    val artistTitle: String = "",
+    val label: String = "",
+    val year: String = "",
+    val country: String = "",
+    val format: String = "",
+    val genres: List<String> = emptyList()
 )
 
 data class CollectionField(val id: Int, val name: String)
