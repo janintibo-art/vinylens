@@ -1,0 +1,8 @@
+<resources>
+    <style name="Theme.VinyLens" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/vinyl_ink</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSecondary">@color/vinyl_gold</item>
+        <item name="colorTertiary">@color/vinyl_gold</item>
+    </style>
+</resources>
