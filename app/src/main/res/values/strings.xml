@@ -1,6 +1,20 @@
 <resources>
     <string name="app_name">VinyLens</string>
     <string name="hint_query">Artiste + titre</string>
+    <string name="draft_artist">Artiste</string>
+    <string name="draft_title">Titre</string>
+    <string name="draft_label">Label</string>
+    <string name="draft_catno">N° de catalogue</string>
+    <string name="draft_year">Année</string>
+    <string name="draft_format">Format (12\", LP, cassette…)</string>
+    <string name="draft_notes">Notes (lien Bandcamp, tirage, plages…)</string>
+    <string name="exact_match">N° EXACT</string>
+    <string name="action_sideline">Mettre de côté</string>
+    <string name="action_create">Pas sur Discogs</string>
+    <string name="menu_sidelined">Disques mis de côté</string>
+    <string name="menu_drafts">Fiches à soumettre</string>
+    <string name="menu_journal">Journal de session</string>
+    <string name="menu_condition">État par défaut</string>
     <string name="scan_barcode">Scanner un code-barres</string>
     <string name="hint_catno">N° catalogue, matrice, code-barres</string>
     <string name="mode_sleeve">Pochette</string>

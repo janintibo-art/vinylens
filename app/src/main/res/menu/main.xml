@@ -6,6 +6,10 @@
         android:checkable="true"
         android:title="@string/menu_chain"
         app:showAsAction="never" />
+    <item android:id="@+id/action_sidelined" android:title="@string/menu_sidelined" app:showAsAction="never" />
+    <item android:id="@+id/action_drafts" android:title="@string/menu_drafts" app:showAsAction="never" />
+    <item android:id="@+id/action_journal" android:title="@string/menu_journal" app:showAsAction="never" />
+    <item android:id="@+id/action_condition" android:title="@string/menu_condition" app:showAsAction="never" />
     <item android:id="@+id/action_reset" android:title="@string/menu_reset" app:showAsAction="never" />
     <item android:id="@+id/action_account" android:title="@string/menu_account" app:showAsAction="never" />
     <item android:id="@+id/action_folder" android:title="@string/menu_folder" app:showAsAction="never" />

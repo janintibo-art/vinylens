@@ -13,8 +13,12 @@ data class Release(
     val title: String,
     val subtitle: String,
     val thumb: String,
-    val url: String
+    val url: String,
+    val catno: String = "",
+    val exactMatch: Boolean = false
 )
+
+data class CollectionField(val id: Int, val name: String)
 
 data class Folder(val id: Int, val name: String, val count: Int)
 
@@ -201,12 +205,46 @@ object DiscogsApi {
         }
     }
 
-    /** Ajoute le pressage à un dossier de la collection. */
+    /** Ajoute le pressage et renvoie l'identifiant de l'exemplaire créé. */
     @Throws(IOException::class)
-    fun addToCollection(username: String, folderId: Int, releaseId: Int, token: String) {
+    fun addToCollection(username: String, folderId: Int, releaseId: Int, token: String): Int {
         val url = "$BASE/users/${enc(username)}/collection/folders/$folderId/releases/$releaseId"
         val empty = ByteArray(0).toRequestBody(null)
-        call(req(url, token).post(empty).build(), "modifier ta collection")
+        val body = call(req(url, token).post(empty).build(), "modifier ta collection")
+        return try { JSONObject(body).optInt("instance_id") } catch (e: Exception) { 0 }
+    }
+
+    /** Retire un exemplaire précis de la collection. */
+    @Throws(IOException::class)
+    fun removeFromCollection(username: String, folderId: Int, releaseId: Int, instanceId: Int, token: String) {
+        val url = "$BASE/users/${enc(username)}/collection/folders/$folderId/releases/$releaseId/instances/$instanceId"
+        call(req(url, token).delete().build(), "modifier ta collection")
+    }
+
+    /** Champs personnalisés de la collection : état du disque, de la pochette, notes. */
+    @Throws(IOException::class)
+    fun collectionFields(username: String, token: String): List<CollectionField> {
+        val url = "$BASE/users/${enc(username)}/collection/fields"
+        val arr = JSONObject(call(req(url, token).build(), "lire tes champs")).optJSONArray("fields")
+            ?: return emptyList()
+        val out = ArrayList<CollectionField>()
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            out.add(CollectionField(o.optInt("id"), o.optString("name")))
+        }
+        return out
+    }
+
+    /** Renseigne un champ sur un exemplaire (par ex. « Very Good Plus (VG+) »). */
+    @Throws(IOException::class)
+    fun setInstanceField(
+        username: String, folderId: Int, releaseId: Int,
+        instanceId: Int, fieldId: Int, value: String, token: String
+    ) {
+        val url = "$BASE/users/${enc(username)}/collection/folders/$folderId/releases/$releaseId" +
+                "/instances/$instanceId/fields/$fieldId?value=${enc(value)}"
+        val empty = ByteArray(0).toRequestBody(null)
+        call(req(url, token).post(empty).build(), "noter l'état")
     }
 
     /** Ajoute le pressage à la liste de souhaits. */

@@ -197,3 +197,29 @@ Deux chemins, complémentaires :
   en OCR, et il ne remplace jamais une valeur déjà présente dans le champ.
 
 Le critère `barcode` de la recherche accepte désormais 8 à 14 chiffres, pour couvrir EAN-8 et UPC-A.
+
+## Session de catalogage (v3.0)
+
+| Fonction | Où | Ce que ça fait |
+|---|---|---|
+| **Mettre de côté** | bouton sous le message | garde le disque non identifié avec ses deux photos et le texte lu |
+| **Pas sur Discogs** | bouton sous le message | prépare une fiche (artiste, titre, label, n°, année, format, notes) avec les photos |
+| **Journal de session** | menu ⋮ | liste les ajouts, permet d'en **retirer un** de la collection (DELETE de l'exemplaire) |
+| **État par défaut** | menu ⋮ | applique un état disque + pochette à chaque ajout via les champs de collection |
+| **Export** | dans chaque pile | CSV + photos via la feuille de partage |
+
+Détails d'implémentation :
+
+- Stockage local en JSON (`filesDir/vinylens_items.json`), photos copiées dans `filesDir/photos`
+  (le cache pouvant être vidé par le système).
+- Le pressage dont le n° de catalogue correspond exactement remonte en tête avec un badge doré :
+  comparaison normalisée, `SR-04` = `SR 04` = `sr04`.
+- `addToCollection` renvoie l'`instance_id`, indispensable pour annuler un ajout et pour écrire
+  l'état sur le bon exemplaire.
+- Hors ligne : un ajout part en file d'attente et se rejoue au lancement suivant ; une recherche
+  impossible met automatiquement le disque de côté avec ses photos.
+- Dead wax : si la première lecture ne donne rien, l'image est repassée avec renfort de contraste
+  local (estimation du fond par flou boîte, soustraction, étirement) puis relue dans les 4 sens.
+
+**Création de pressage** : l'API Discogs n'expose aucun endpoint de soumission. Les fiches sont donc
+préparées en local et le formulaire du site (`/release/add`) s'ouvre depuis la pile.

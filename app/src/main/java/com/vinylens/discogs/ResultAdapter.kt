@@ -32,6 +32,7 @@ class ResultAdapter(
         val cover: ImageView = view.findViewById(R.id.cover)
         val title: TextView = view.findViewById(R.id.title)
         val subtitle: TextView = view.findViewById(R.id.subtitle)
+        val matchBadge: TextView = view.findViewById(R.id.matchBadge)
         val textZone: View = view.findViewById(R.id.textZone)
         val btnAdd: ImageButton = view.findViewById(R.id.btnAdd)
     }
@@ -43,6 +44,7 @@ class ResultAdapter(
         val item = items[position]
         holder.title.text = item.title
         holder.subtitle.text = item.subtitle
+        holder.matchBadge.visibility = if (item.exactMatch) View.VISIBLE else View.GONE
 
         if (item.thumb.isNotBlank()) {
             holder.cover.load(item.thumb) {

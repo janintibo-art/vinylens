@@ -90,6 +90,8 @@ class MainActivity : AppCompatActivity() {
 
     private var pendingSide: Side = Side.FRONT
     private var pendingUri: Uri? = null
+    private var frontUri: Uri? = null
+    private var backUri: Uri? = null
     private var frontDone = false
     private var backDone = false
     private var lastFromCamera = false
@@ -172,6 +174,8 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<View>(R.id.btnSearch).setOnClickListener { search() }
         findViewById<View>(R.id.btnScan).setOnClickListener { scanBarcode() }
+        findViewById<View>(R.id.btnSideline).setOnClickListener { sideline() }
+        findViewById<View>(R.id.btnCreate).setOnClickListener { draftDialog(null) }
         findViewById<View>(R.id.btnWeb).setOnClickListener {
             val c = criteria()
             if (c.isEmpty()) toast("Rien à chercher.") else openUrl(DiscogsApi.webSearchUrl(c))
@@ -185,7 +189,11 @@ class MainActivity : AppCompatActivity() {
             token.isBlank() ->
                 status.text = "Connecte ton compte Discogs (menu ⋮ > Compte Discogs) pour chercher et enrichir ta collection."
             username.isBlank() -> verifyAccount(token, silent = true)
-            else -> status.text = "Connecté : $username · dossier « $folderName »."
+            else -> {
+                status.text = "Connecté : $username · dossier « $folderName »."
+                ensureFieldIds()
+                retryPending()
+            }
         }
     }
 
@@ -210,6 +218,10 @@ class MainActivity : AppCompatActivity() {
                 "Mode à la chaîne désactivé : chaque photo se déclenche à la main."
             true
         }
+        R.id.action_sidelined -> { pileDialog(Store.REVIEW); true }
+        R.id.action_drafts -> { pileDialog(Store.CREATE); true }
+        R.id.action_journal -> { journalDialog(); true }
+        R.id.action_condition -> { conditionDialog(); true }
         R.id.action_account -> { accountDialog(); true }
         R.id.action_folder -> { chooseFolder(); true }
         R.id.action_help -> { showHelp(); true }
@@ -263,6 +275,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onImage(side: Side, uri: Uri) {
+        if (side == Side.FRONT) frontUri = uri else backUri = uri
         val img = if (side == Side.FRONT) imgFront else imgBack
         img.setPadding(0, 0, 0, 0)
         img.scaleType = ImageView.ScaleType.CENTER_CROP
@@ -336,6 +349,19 @@ class MainActivity : AppCompatActivity() {
                 withContext(Dispatchers.Default) { InputImage.fromBitmap(bmp, a) }
                     .let { recognize(it) }
                     ?.let { texts.add(it) }
+            }
+
+            // Gravure de dead wax : si la première passe ne donne rien, on renforce le contraste
+            if (texts.sumOf { it.text.length } < 4) {
+                status.text = "Rien de lisible, seconde passe avec renfort de contraste…"
+                val boosted = withContext(Dispatchers.Default) { ImagePrep.enhance(bmp) }
+                if (boosted != null) {
+                    for (a in angles) {
+                        withContext(Dispatchers.Default) { InputImage.fromBitmap(boosted, a) }
+                            .let { recognize(it) }
+                            ?.let { texts.add(it) }
+                    }
+                }
             }
 
             progress.visibility = View.GONE
@@ -567,7 +593,8 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 for ((index, c) in attempts.withIndex()) {
-                    val results = withContext(Dispatchers.IO) { DiscogsApi.search(c, token) }
+                    val raw = withContext(Dispatchers.IO) { DiscogsApi.search(c, token) }
+                    val results = rankByCatno(raw)
                     if (results.isNotEmpty()) {
                         progress.visibility = View.GONE
                         adapter.submit(results)
@@ -585,9 +612,34 @@ class MainActivity : AppCompatActivity() {
                         "ou ouvre la recherche sur le site : elle est plus tolérante."
             } catch (e: Exception) {
                 progress.visibility = View.GONE
-                status.text = e.message ?: "Erreur réseau."
+                if (isNetworkError(e)) {
+                    val (f, b) = currentPhotos("horsligne")
+                    Store.add(
+                        this@MainActivity, Item(
+                            kind = Store.REVIEW, title = base.q, catno = base.catno,
+                            notes = "Hors ligne", frontPath = f, backPath = b
+                        )
+                    )
+                    status.text = "Hors ligne : disque mis de côté avec ses photos (menu ⋮)."
+                } else {
+                    status.text = e.message ?: "Erreur réseau."
+                }
             }
         }
+    }
+
+    /** Normalise un n° pour comparer « SR-04 », « SR 04 » et « sr04 ». */
+    private fun normalize(s: String) = s.uppercase().filter { it.isLetterOrDigit() }
+
+    /**
+     * Le pressage dont le n° de catalogue correspond exactement à ce qu'on a lu passe devant :
+     * c'est ce qui distingue l'original de ses rééditions.
+     */
+    private fun rankByCatno(list: List<Release>): List<Release> {
+        val wanted = normalize(catnoInput.text.toString().trim())
+        if (wanted.length < 3) return list
+        val marked = list.map { it.copy(exactMatch = normalize(it.catno) == wanted) }
+        return marked.sortedByDescending { it.exactMatch }
     }
 
     /** Marque discrètement les pressages déjà présents dans la collection (10 premiers). */
@@ -644,9 +696,16 @@ class MainActivity : AppCompatActivity() {
         progress.visibility = View.VISIBLE
         lifecycleScope.launch {
             try {
-                withContext(Dispatchers.IO) {
+                val instance = withContext(Dispatchers.IO) {
                     DiscogsApi.addToCollection(username, folderId, release.id, token)
                 }
+                applyCondition(release.id, instance)
+                Store.add(
+                    this@MainActivity, Item(
+                        kind = Store.ADDED, title = release.title, catno = release.catno,
+                        releaseId = release.id, instanceId = instance, folderId = folderId
+                    )
+                )
                 progress.visibility = View.GONE
                 owned.add(release.id)
                 saveOwned()
@@ -664,7 +723,17 @@ class MainActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 progress.visibility = View.GONE
-                status.text = e.message ?: "Ajout impossible."
+                if (isNetworkError(e)) {
+                    Store.add(
+                        this@MainActivity, Item(
+                            kind = Store.PENDING, title = release.title, catno = release.catno,
+                            releaseId = release.id, folderId = folderId
+                        )
+                    )
+                    status.text = "Hors ligne : ajout mis en file d'attente, il partira au retour du réseau."
+                } else {
+                    status.text = e.message ?: "Ajout impossible."
+                }
             }
         }
     }
@@ -773,10 +842,385 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ---------- Piles locales : à revoir, à soumettre, journal ----------
+
+    private fun currentPhotos(prefix: String): Pair<String, String> {
+        val f = frontUri?.let { Store.persistPhoto(this, it, prefix + "_A") } ?: ""
+        val b = backUri?.let { Store.persistPhoto(this, it, prefix + "_B") } ?: ""
+        return f to b
+    }
+
+    /** Met le disque de côté avec ses photos : rien n'est perdu, on tranchera plus tard. */
+    private fun sideline() {
+        val q = queryInput.text.toString().trim()
+        val cat = catnoInput.text.toString().trim()
+        if (q.isBlank() && cat.isBlank() && frontUri == null) {
+            toast("Rien à mettre de côté.")
+            return
+        }
+        val (f, b) = currentPhotos("revoir")
+        val extra = (frontLines + backLines).distinct().take(8).joinToString(" | ")
+        Store.add(
+            this, Item(
+                kind = Store.REVIEW, title = q, catno = cat,
+                notes = extra, frontPath = f, backPath = b
+            )
+        )
+        val n = Store.count(this, Store.REVIEW)
+        toast("Mis de côté ($n)")
+        reset()
+        if (chainMode) {
+            status.text = "$n disques à revoir. Suivant : photographie le recto."
+            pendingSide = Side.FRONT
+            lastFromCamera = true
+            imgFront.postDelayed({ shootPhoto() }, 400)
+        } else {
+            status.text = "Mis de côté. $n disques en attente de réidentification."
+        }
+    }
+
+    /**
+     * Discogs n'a pas d'API de soumission : on prépare donc la fiche en local, photos comprises,
+     * et on ouvrira le formulaire du site pour la saisir.
+     */
+    private fun draftDialog(existing: Item?) {
+        val view = layoutInflater.inflate(R.layout.dialog_draft, null)
+        val artist = view.findViewById<EditText>(R.id.dArtist)
+        val title = view.findViewById<EditText>(R.id.dTitle)
+        val label = view.findViewById<EditText>(R.id.dLabel)
+        val catno = view.findViewById<EditText>(R.id.dCatno)
+        val year = view.findViewById<EditText>(R.id.dYear)
+        val format = view.findViewById<EditText>(R.id.dFormat)
+        val notes = view.findViewById<EditText>(R.id.dNotes)
+
+        if (existing != null) {
+            artist.setText(existing.artist); title.setText(existing.title)
+            label.setText(existing.label); catno.setText(existing.catno)
+            year.setText(existing.year); format.setText(existing.format)
+            notes.setText(existing.notes)
+        } else {
+            val q = queryInput.text.toString().trim()
+            val parts = q.split(" ")
+            artist.setText(parts.firstOrNull().orEmpty())
+            title.setText(parts.drop(1).joinToString(" "))
+            catno.setText(catnoInput.text.toString().trim())
+            format.setText(if (mode == Mode.DISC) "12\"" else "LP")
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(if (existing == null) "Fiche à soumettre" else "Modifier la fiche")
+            .setView(view)
+            .setPositiveButton("Enregistrer") { _, _ ->
+                val (f, b) = if (existing == null) currentPhotos("fiche") else (existing.frontPath to existing.backPath)
+                val item = Item(
+                    id = existing?.id ?: System.currentTimeMillis(),
+                    kind = Store.CREATE,
+                    artist = artist.text.toString().trim(),
+                    title = title.text.toString().trim(),
+                    label = label.text.toString().trim(),
+                    catno = catno.text.toString().trim(),
+                    year = year.text.toString().trim(),
+                    format = format.text.toString().trim(),
+                    notes = notes.text.toString().trim(),
+                    frontPath = f, backPath = b
+                )
+                if (existing == null) Store.add(this, item) else Store.update(this, item)
+                val n = Store.count(this, Store.CREATE)
+                status.text = "$n fiches à soumettre. Menu ⋮ > Fiches à soumettre pour les exporter."
+                if (existing == null) reset()
+            }
+            .setNegativeButton("Annuler", null)
+            .show()
+    }
+
+    private fun pileDialog(kind: String) {
+        val items = Store.byKind(this, kind)
+        val titre = if (kind == Store.REVIEW) "Disques mis de côté" else "Fiches à soumettre"
+        if (items.isEmpty()) {
+            MaterialAlertDialogBuilder(this).setTitle(titre)
+                .setMessage("Rien pour l'instant.")
+                .setPositiveButton("OK", null).show()
+            return
+        }
+        val labels = items.map { it.label() }.toTypedArray()
+        MaterialAlertDialogBuilder(this)
+            .setTitle("$titre (${items.size})")
+            .setItems(labels) { _, which -> itemActions(items[which]) }
+            .setPositiveButton("Exporter tout") { _, _ ->
+                shareItems(listOf(kind), if (kind == Store.REVIEW) "a_revoir.csv" else "a_soumettre.csv")
+            }
+            .setNeutralButton("Vider") { _, _ ->
+                MaterialAlertDialogBuilder(this)
+                    .setTitle("Vider la pile ?")
+                    .setMessage("Les ${items.size} fiches et leurs photos seront effacées du téléphone.")
+                    .setPositiveButton("Vider") { _, _ ->
+                        Store.clearKind(this, kind)
+                        status.text = "Pile vidée."
+                    }
+                    .setNegativeButton("Annuler", null)
+                    .show()
+            }
+            .setNegativeButton("Fermer", null)
+            .show()
+    }
+
+    private fun itemActions(item: Item) {
+        val options = if (item.kind == Store.CREATE)
+            arrayOf("Modifier", "Ouvrir le formulaire Discogs", "Exporter cette fiche", "Reprendre la recherche", "Supprimer")
+        else
+            arrayOf("Reprendre la recherche", "Exporter cette fiche", "En faire une fiche à soumettre", "Supprimer")
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(item.label())
+            .setItems(options) { _, which ->
+                if (item.kind == Store.CREATE) when (which) {
+                    0 -> draftDialog(item)
+                    1 -> openUrl("https://www.discogs.com/release/add")
+                    2 -> shareOne(item)
+                    3 -> reopen(item)
+                    4 -> { Store.remove(this, item.id); status.text = "Fiche supprimée." }
+                } else when (which) {
+                    0 -> reopen(item)
+                    1 -> shareOne(item)
+                    2 -> {
+                        Store.remove(this, item.id)
+                        Store.add(this, item.copy(kind = Store.CREATE))
+                        status.text = "Déplacé dans les fiches à soumettre."
+                    }
+                    3 -> { Store.remove(this, item.id); status.text = "Fiche supprimée." }
+                }
+            }
+            .show()
+    }
+
+    private fun reopen(item: Item) {
+        queryInput.setText(listOf(item.artist, item.title).filter { it.isNotBlank() }.joinToString(" "))
+        catnoInput.setText(item.catno)
+        status.text = "Repris depuis la pile. Modifie si besoin, puis cherche."
+    }
+
+    /** Export CSV + photos, via la feuille de partage du téléphone. */
+    private fun shareItems(kinds: List<String>, fileName: String) {
+        val csv = Store.exportCsv(this, kinds, fileName)
+        if (csv == null) {
+            toast("Export impossible.")
+            return
+        }
+        val uris = ArrayList<Uri>()
+        uris.add(FileProvider.getUriForFile(this, "$packageName.fileprovider", csv))
+        Store.all(this).filter { it.kind in kinds }.flatMap { it.photos() }.take(40).forEach { path ->
+            val f = File(path)
+            if (f.exists()) uris.add(FileProvider.getUriForFile(this, "$packageName.fileprovider", f))
+        }
+        val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+            type = "*/*"
+            putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+            putExtra(Intent.EXTRA_SUBJECT, "VinyLens — $fileName")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        try {
+            startActivity(Intent.createChooser(intent, "Exporter"))
+        } catch (e: Exception) {
+            toast("Aucune application pour l'export.")
+        }
+    }
+
+    private fun shareOne(item: Item) {
+        val text = buildString {
+            appendLine("Artiste : ${item.artist}")
+            appendLine("Titre : ${item.title}")
+            appendLine("Label : ${item.label}")
+            appendLine("N° de catalogue : ${item.catno}")
+            appendLine("Année : ${item.year}")
+            appendLine("Format : ${item.format}")
+            appendLine("Notes : ${item.notes}")
+        }
+        val uris = ArrayList<Uri>()
+        item.photos().forEach { path ->
+            val f = File(path)
+            if (f.exists()) uris.add(FileProvider.getUriForFile(this, "$packageName.fileprovider", f))
+        }
+        val intent = Intent(if (uris.isEmpty()) Intent.ACTION_SEND else Intent.ACTION_SEND_MULTIPLE).apply {
+            type = if (uris.isEmpty()) "text/plain" else "*/*"
+            putExtra(Intent.EXTRA_TEXT, text)
+            if (uris.isNotEmpty()) putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        try {
+            startActivity(Intent.createChooser(intent, "Partager la fiche"))
+        } catch (e: Exception) {
+            toast("Aucune application pour le partage.")
+        }
+    }
+
+    // ---------- Journal de session ----------
+
+    private fun journalDialog() {
+        val items = Store.byKind(this, Store.ADDED)
+        val pending = Store.count(this, Store.PENDING)
+        if (items.isEmpty()) {
+            MaterialAlertDialogBuilder(this).setTitle("Journal de session")
+                .setMessage(if (pending > 0) "Aucun ajout confirmé. $pending en attente de réseau."
+                            else "Aucun ajout pour l'instant.")
+                .setPositiveButton("OK", null).show()
+            return
+        }
+        val labels = items.map { it.label() }.toTypedArray()
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Ajoutés : ${items.size}" + if (pending > 0) " · $pending en attente" else "")
+            .setItems(labels) { _, which -> addedActions(items[which]) }
+            .setPositiveButton("Exporter") { _, _ -> shareItems(listOf(Store.ADDED), "ajouts.csv") }
+            .setNeutralButton("Effacer le journal") { _, _ ->
+                Store.clearKind(this, Store.ADDED)
+                status.text = "Journal effacé (la collection Discogs n'est pas touchée)."
+            }
+            .setNegativeButton("Fermer", null)
+            .show()
+    }
+
+    private fun addedActions(item: Item) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(item.label())
+            .setItems(arrayOf("Ouvrir la fiche Discogs", "Retirer de ma collection")) { _, which ->
+                when (which) {
+                    0 -> openUrl("https://www.discogs.com/release/${item.releaseId}")
+                    1 -> undoAdd(item)
+                }
+            }
+            .show()
+    }
+
+    private fun undoAdd(item: Item) {
+        if (item.instanceId <= 0) {
+            toast("Exemplaire inconnu, retire-le depuis le site.")
+            return
+        }
+        progress.visibility = View.VISIBLE
+        lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    DiscogsApi.removeFromCollection(username, item.folderId, item.releaseId, item.instanceId, token)
+                }
+                progress.visibility = View.GONE
+                Store.remove(this@MainActivity, item.id)
+                owned.remove(item.releaseId)
+                saveOwned()
+                adapter.refreshItem(item.releaseId)
+                if (sessionAdded > 0) sessionAdded--
+                status.text = "Retiré de ta collection : ${item.title}"
+            } catch (e: Exception) {
+                progress.visibility = View.GONE
+                status.text = e.message ?: "Retrait impossible."
+            }
+        }
+    }
+
+    // ---------- État par défaut ----------
+
+    private val grades = arrayOf(
+        "Mint (M)", "Near Mint (NM or M-)", "Very Good Plus (VG+)", "Very Good (VG)",
+        "Good Plus (G+)", "Good (G)", "Fair (F)", "Poor (P)", "Ne pas renseigner"
+    )
+
+    private fun conditionDialog() {
+        if (username.isBlank()) { accountDialog(); return }
+        MaterialAlertDialogBuilder(this)
+            .setTitle("État du disque appliqué à chaque ajout")
+            .setItems(grades) { _, which ->
+                val media = if (which == grades.lastIndex) "" else grades[which]
+                prefs.edit().putString("grade_media", media).apply()
+                sleeveDialog(media)
+            }
+            .setNegativeButton("Annuler", null)
+            .show()
+    }
+
+    private fun sleeveDialog(media: String) {
+        val sleeveGrades = grades.toMutableList().apply { add(lastIndex, "Generic") }.toTypedArray()
+        MaterialAlertDialogBuilder(this)
+            .setTitle("État de la pochette")
+            .setItems(sleeveGrades) { _, which ->
+                val sleeve = if (which == sleeveGrades.lastIndex) "" else sleeveGrades[which]
+                prefs.edit().putString("grade_sleeve", sleeve).apply()
+                ensureFieldIds()
+                status.text = when {
+                    media.isBlank() && sleeve.isBlank() -> "Aucun état ne sera renseigné."
+                    else -> "État appliqué à chaque ajout : ${media.ifBlank { "—" }} / ${sleeve.ifBlank { "—" }}"
+                }
+            }
+            .show()
+    }
+
+    /** Récupère une fois pour toutes les identifiants des champs « Media » et « Sleeve ». */
+    private fun ensureFieldIds() {
+        if (prefs.getInt("field_media", 0) > 0 || username.isBlank()) return
+        lifecycleScope.launch {
+            val fields = withContext(Dispatchers.IO) {
+                try { DiscogsApi.collectionFields(username, token) } catch (e: Exception) { emptyList() }
+            }
+            val media = fields.firstOrNull { it.name.contains("Media", true) }
+            val sleeve = fields.firstOrNull { it.name.contains("Sleeve", true) }
+            prefs.edit()
+                .putInt("field_media", media?.id ?: 0)
+                .putInt("field_sleeve", sleeve?.id ?: 0)
+                .apply()
+        }
+    }
+
+    private suspend fun applyCondition(releaseId: Int, instanceId: Int) {
+        if (instanceId <= 0) return
+        val media = prefs.getString("grade_media", "").orEmpty()
+        val sleeve = prefs.getString("grade_sleeve", "").orEmpty()
+        val fMedia = prefs.getInt("field_media", 0)
+        val fSleeve = prefs.getInt("field_sleeve", 0)
+        withContext(Dispatchers.IO) {
+            try {
+                if (media.isNotBlank() && fMedia > 0)
+                    DiscogsApi.setInstanceField(username, folderId, releaseId, instanceId, fMedia, media, token)
+                if (sleeve.isNotBlank() && fSleeve > 0)
+                    DiscogsApi.setInstanceField(username, folderId, releaseId, instanceId, fSleeve, sleeve, token)
+            } catch (e: Exception) {
+                // l'ajout est fait : un état non renseigné n'est pas bloquant
+            }
+        }
+    }
+
+    // ---------- File d'attente hors-ligne ----------
+
+    private fun isNetworkError(e: Exception): Boolean {
+        val m = (e.message ?: "").lowercase()
+        return e is java.io.IOException &&
+                (m.contains("unable to resolve host") || m.contains("timeout") ||
+                 m.contains("failed to connect") || m.contains("network") || m.contains("unreachable"))
+    }
+
+    private fun retryPending() {
+        val pending = Store.byKind(this, Store.PENDING)
+        if (pending.isEmpty() || username.isBlank() || token.isBlank()) return
+        lifecycleScope.launch {
+            var done = 0
+            for (item in pending) {
+                try {
+                    val instance = withContext(Dispatchers.IO) {
+                        DiscogsApi.addToCollection(username, item.folderId, item.releaseId, token)
+                    }
+                    Store.remove(this@MainActivity, item.id)
+                    Store.add(this@MainActivity, item.copy(kind = Store.ADDED, instanceId = instance))
+                    applyCondition(item.releaseId, instance)
+                    done++
+                } catch (e: Exception) {
+                    break // toujours hors ligne : on réessaiera au prochain lancement
+                }
+            }
+            if (done > 0) status.text = "$done ajout(s) en attente envoyés à Discogs."
+        }
+    }
+
     // ---------- Divers ----------
 
     private fun reset() {
         frontDone = false; backDone = false
+        frontUri = null; backUri = null
         frontLines = emptyList(); backLines = emptyList()
         val pad = (10 * resources.displayMetrics.density).toInt()
         for (img in listOf(imgFront, imgBack)) {
@@ -817,6 +1261,12 @@ class MainActivity : AppCompatActivity() {
                         "précis (code-barres) au plus large (artiste + titre).\n" +
                         "5. Touche un résultat pour ouvrir sa fiche, ou le bouton + pour l'ajouter " +
                         "à ta collection ou à ta wantlist.\n\n" +
+                        "Deux boutons sous le message : « Mettre de côté » garde le disque et ses photos " +
+                        "pour plus tard, « Pas sur Discogs » prépare une fiche à soumettre. " +
+                        "Les deux piles s'exportent en CSV avec les photos depuis le menu ⋮.\n\n" +
+                        "Le journal de session liste tes ajouts et permet d'en retirer un de la " +
+                        "collection. L'état par défaut (VG+, NM…) est appliqué automatiquement à " +
+                        "chaque ajout.\n\n" +
                         "Une coche verte signale un pressage déjà présent dans ta collection — " +
                         "pratique pour ne pas cataloguer deux fois le même disque.\n\n" +
                         "Mode à la chaîne (menu ⋮) : après le recto, l'appareil photo repart tout seul " +
